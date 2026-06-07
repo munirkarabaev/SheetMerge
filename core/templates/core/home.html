@@ -1,0 +1,29 @@
+{% extends "core/base.html" %}
+
+{% block title %}Home | SheetMerge{% endblock title %}
+
+{% block content %}
+<section class="hero">
+    <p class="hero__eyebrow">Django setup</p>
+    <h1>Clean, merge, and organize spreadsheet transactions.</h1>
+    <p class="hero__body">
+        This initial Django application provides the base structure for future
+        project workspaces, file uploads, and transaction processing features.
+    </p>
+</section>
+
+<section class="feature-grid" aria-label="Planned capabilities">
+    <article class="feature-card">
+        <h2>Projects</h2>
+        <p>Create a workspace to organize imports and review outputs.</p>
+    </article>
+    <article class="feature-card">
+        <h2>Uploads</h2>
+        <p>Bring in CSV and XLSX files from multiple financial sources.</p>
+    </article>
+    <article class="feature-card">
+        <h2>Transactions</h2>
+        <p>Normalize, group, and export clean transaction records.</p>
+    </article>
+</section>
+{% endblock content %}
