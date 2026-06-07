@@ -5,24 +5,60 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}SheetMerge{% endblock title %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+    >
     <link rel="stylesheet" href="{% static 'core/css/app.css' %}">
 </head>
 <body>
-    <div class="site-shell">
-        <header class="site-header">
-            <nav class="navbar" aria-label="Primary navigation">
-                <a class="navbar__brand" href="{% url 'core:home' %}">SheetMerge</a>
-                <div class="navbar__links">
-                    <a href="{% url 'core:home' %}">Home</a>
-                    <a href="#">Projects</a>
-                    <a href="#">Uploads</a>
-                    <a href="#">Transactions</a>
+    <div class="app-shell">
+        <aside class="workspace-rail" aria-label="Workspace navigation">
+            <div class="workspace-rail__brand">
+                <span class="workspace-rail__brand-mark">S</span>
+                <div>
+                    <p class="workspace-rail__eyebrow">AI Workspace</p>
+                    <a class="workspace-rail__title" href="{% url 'core:home' %}">SheetMerge</a>
                 </div>
-            </nav>
-        </header>
+            </div>
 
-        <main class="site-main">
-            {% block content %}{% endblock content %}
+            <nav class="workspace-nav" aria-label="Primary navigation">
+                <a class="workspace-nav__link workspace-nav__link--active" href="{% url 'core:home' %}">
+                    Overview
+                </a>
+                <a class="workspace-nav__link" href="#">Projects</a>
+                <a class="workspace-nav__link" href="#">Uploads</a>
+                <a class="workspace-nav__link" href="#">Transactions</a>
+                <a class="workspace-nav__link" href="#">Exports</a>
+            </nav>
+
+            <section class="workspace-rail__panel" aria-label="Assistant status">
+                <p class="workspace-rail__panel-label">Assistant</p>
+                <h2>Ready to review imported ledgers</h2>
+                <p>
+                    Ask the AI to detect mismatched columns, identify duplicate
+                    entries, and prepare grouped exports.
+                </p>
+            </section>
+        </aside>
+
+        <main class="workspace-main">
+            <header class="topbar">
+                <div>
+                    <p class="topbar__eyebrow">Financial operations</p>
+                    <h1 class="topbar__title">{% block page_heading %}Workspace Overview{% endblock page_heading %}</h1>
+                </div>
+                <div class="topbar__meta">
+                    <span class="status-pill">AI-first workflow</span>
+                    <a class="button button--primary" href="#">New project</a>
+                </div>
+            </header>
+
+            <div class="workspace-content">
+                {% block content %}{% endblock content %}
+            </div>
         </main>
     </div>
 </body>
