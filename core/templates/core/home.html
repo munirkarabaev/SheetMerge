@@ -1,116 +1,73 @@
 {% extends "core/base.html" %}
 
 {% block title %}Home | SheetMerge{% endblock title %}
-{% block page_heading %}AI Accountant Workspace{% endblock page_heading %}
 
 {% block content %}
-<section class="hero-card">
-    <div class="hero-card__content">
-        <span class="section-badge">Operational summary</span>
-        <h2>Import messy spreadsheets, let AI organize the work, and review clean outputs.</h2>
+<section class="hero">
+    <div class="hero__content">
+        <span class="section-badge">AI merge workspace</span>
+        <h1>One format for fragmented transaction files.</h1>
         <p>
-            SheetMerge is structured like a financial workspace: projects hold the work,
-            uploads bring in source files, and transactions move through a guided review
-            flow before export.
+            Group transactions into one clean structure and cut down manual spreadsheet work.
         </p>
-        <div class="hero-card__actions">
+        <div class="hero__actions">
             <a class="button button--primary" href="#">Start project</a>
-            <a class="button button--secondary" href="#">View sample flow</a>
+            <a class="button button--secondary" href="#">See preview</a>
         </div>
     </div>
-    <div class="hero-card__aside">
-        <p class="hero-card__aside-label">AI Briefing</p>
-        <ul class="signal-list">
-            <li>3 source formats detected across bank and card exports</li>
-            <li>11 column names likely map to the transaction schema</li>
-            <li>Potential duplicate vendor rows can be grouped before export</li>
-        </ul>
+    <div class="hero__panel card">
+        <p class="hero__panel-label">Input</p>
+        <div class="hero__panel-stack">
+            <span class="mono-chip">CSV</span>
+            <span class="mono-chip">XLSX</span>
+            <span class="mono-chip">MERGED OUTPUT</span>
+        </div>
     </div>
 </section>
 
-<section class="metrics-grid" aria-label="Workspace metrics">
-    <article class="metric-card">
-        <p class="metric-card__label">Active projects</p>
-        <p class="metric-card__value">04</p>
-        <p class="metric-card__detail">Workspaces prepared for intake and review</p>
+<section class="feature-grid" aria-label="Core workflow">
+    <article class="feature-card card">
+        <p class="feature-card__eyebrow">Step 01</p>
+        <h2>Drop in files</h2>
+        <p>Bring in multiple exports fast.</p>
     </article>
-    <article class="metric-card">
-        <p class="metric-card__label">Files queued</p>
-        <p class="metric-card__value metric-card__value--mono">12</p>
-        <p class="metric-card__detail">CSV and XLSX statements awaiting normalization</p>
+    <article class="feature-card card">
+        <p class="feature-card__eyebrow">Step 02</p>
+        <h2>Merge the structure</h2>
+        <p>Align rows into one format.</p>
     </article>
-    <article class="metric-card">
-        <p class="metric-card__label">AI suggestions</p>
-        <p class="metric-card__value">27</p>
-        <p class="metric-card__detail">Mappings and grouping hints ready for review</p>
-    </article>
-</section>
-
-<section class="workspace-grid">
-    <article class="panel-card">
-        <div class="panel-card__header">
-            <div>
-                <p class="panel-card__eyebrow">Project flow</p>
-                <h2>Structured around projects, not files</h2>
-            </div>
-            <span class="status-dot">Ready</span>
-        </div>
-        <div class="stack-list">
-            <div class="stack-list__item">
-                <div>
-                    <h3>1. Create project workspace</h3>
-                    <p>Group uploads, mappings, and exports under one reviewable context.</p>
-                </div>
-                <span class="mono-chip">PROJECT-001</span>
-            </div>
-            <div class="stack-list__item">
-                <div>
-                    <h3>2. Import source files</h3>
-                    <p>Accept bank statements, card exports, and bookkeeping spreadsheets.</p>
-                </div>
-                <span class="mono-chip">CSV / XLSX</span>
-            </div>
-            <div class="stack-list__item">
-                <div>
-                    <h3>3. Review AI normalization</h3>
-                    <p>Confirm mapped columns, cleaned dates, and grouped transaction records.</p>
-                </div>
-                <span class="mono-chip">REVIEW</span>
-            </div>
-        </div>
-    </article>
-
-    <article class="panel-card">
-        <div class="panel-card__header">
-            <div>
-                <p class="panel-card__eyebrow">Assistant panel</p>
-                <h2>What the AI handles first</h2>
-            </div>
-            <a class="text-link" href="#">Open assistant</a>
-        </div>
-        <div class="assistant-card">
-            <div class="assistant-card__message">
-                <p class="assistant-card__label">AI insight</p>
-                <p>
-                    I can detect likely date, amount, description, and account columns
-                    before you manually map every file.
-                </p>
-            </div>
-            <div class="assistant-card__message assistant-card__message--soft">
-                <p class="assistant-card__label">Next action</p>
-                <p>Upload two or more statement files to generate the first suggested schema.</p>
-            </div>
-        </div>
+    <article class="feature-card card">
+        <p class="feature-card__eyebrow">Step 03</p>
+        <h2>Review output</h2>
+        <p>Check the result and move on.</p>
     </article>
 </section>
 
-<section class="panel-card panel-card--table">
-    <div class="panel-card__header">
+<section class="feature-grid feature-grid--secondary" aria-label="Benefits">
+    <article class="feature-card feature-card--soft card">
+        <p class="feature-card__eyebrow">Time</p>
+        <h2>Less manual cleanup</h2>
+        <p>Fewer repetitive edits.</p>
+    </article>
+    <article class="feature-card feature-card--soft card">
+        <p class="feature-card__eyebrow">Consistency</p>
+        <h2>One clean layout</h2>
+        <p>Keep every file aligned.</p>
+    </article>
+    <article class="feature-card feature-card--soft card">
+        <p class="feature-card__eyebrow">Workspace</p>
+        <h2>Built for finance</h2>
+        <p>Clear and focused interface.</p>
+    </article>
+</section>
+
+<section class="preview-card card">
+    <div class="preview-card__header">
         <div>
-            <p class="panel-card__eyebrow">Transaction review</p>
-            <h2>Normalized preview</h2>
+            <p class="feature-card__eyebrow">Preview</p>
+            <h2>Unified transaction view</h2>
         </div>
-        <span class="status-pill status-pill--quiet">Sample output</span>
+        <span class="status-pill status-pill--quiet">Sample</span>
     </div>
 
     <div class="table-wrap">
@@ -137,14 +94,14 @@
                     <td>AWS infrastructure billing</td>
                     <td class="mono-text">card_statement_may.csv</td>
                     <td class="mono-text amount-text">-412.83</td>
-                    <td><span class="inline-badge inline-badge--soft">Review</span></td>
+                    <td><span class="inline-badge inline-badge--soft">Merged</span></td>
                 </tr>
                 <tr>
                     <td class="mono-text">2026-06-03</td>
-                    <td>Office vendor duplicate candidate</td>
+                    <td>Office supply payment</td>
                     <td class="mono-text">expense_upload_03.xlsx</td>
                     <td class="mono-text amount-text">-198.20</td>
-                    <td><span class="inline-badge inline-badge--alert">Grouped</span></td>
+                    <td><span class="inline-badge inline-badge--alert">Unified</span></td>
                 </tr>
             </tbody>
         </table>
