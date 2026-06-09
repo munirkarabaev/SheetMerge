@@ -194,6 +194,8 @@ a {
     align-items: center;
     justify-content: center;
     padding: 0.7rem 1rem;
+    font: inherit;
+    cursor: pointer;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
     font-weight: 600;
@@ -380,9 +382,123 @@ a {
     font-weight: 500;
 }
 
+.auth-shell {
+    min-height: calc(100vh - 8rem);
+    display: grid;
+    place-items: center;
+}
+
+.auth-card {
+    width: min(100%, 34rem);
+    padding: var(--space-8);
+}
+
+.auth-stack,
+.dashboard-stack {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.auth-card h1,
+.dashboard-card h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+}
+
+.auth-card p,
+.dashboard-card p,
+.auth-helper {
+    color: var(--color-muted);
+    line-height: 1.7;
+}
+
+.auth-form,
+.oauth-form {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.auth-form {
+    margin-top: var(--space-6);
+}
+
+.field-group {
+    display: grid;
+    gap: var(--space-2);
+}
+
+.field-group label {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.field-group input {
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: #ffffff;
+    color: var(--color-text);
+    font: inherit;
+}
+
+.field-group ul,
+.field-group .helptext {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+}
+
+.field-errors {
+    color: #b42318;
+    font-size: 0.9rem;
+}
+
+.oauth-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-5) 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--color-border);
+}
+
+.button--full {
+    width: 100%;
+}
+
+.auth-helper a {
+    color: var(--color-primary);
+}
+
+.dashboard-shell {
+    display: grid;
+    gap: var(--space-8);
+}
+
+.dashboard-card,
+.dashboard-grid article {
+    padding: var(--space-6);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-5);
+}
+
 @media (max-width: 1180px) {
     .hero,
-    .feature-grid {
+    .feature-grid,
+    .dashboard-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -414,7 +530,10 @@ a {
     .topbar,
     .feature-card,
     .preview-card,
-    .hero__panel {
+    .hero__panel,
+    .auth-card,
+    .dashboard-card,
+    .dashboard-grid article {
         padding: var(--space-5);
     }
 }

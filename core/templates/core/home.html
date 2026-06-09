@@ -11,8 +11,8 @@
             Group transactions into one clean structure and cut down manual spreadsheet work.
         </p>
         <div class="hero__actions">
-            <a class="button button--primary" href="#">Start project</a>
-            <a class="button button--secondary" href="#">See preview</a>
+            <a class="button button--primary" href="{% url 'account_signup' %}">Create account</a>
+            <a class="button button--secondary" href="#preview">See preview</a>
         </div>
     </div>
     <div class="hero__panel card">
@@ -61,7 +61,7 @@
     </article>
 </section>
 
-<section class="preview-card card">
+<section class="preview-card card" id="preview">
     <div class="preview-card__header">
         <div>
             <p class="feature-card__eyebrow">Preview</p>

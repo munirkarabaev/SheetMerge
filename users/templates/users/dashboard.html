@@ -1,0 +1,33 @@
+{% extends "core/base.html" %}
+
+{% block title %}Dashboard | SheetMerge{% endblock title %}
+
+{% block content %}
+<section class="dashboard-shell">
+    <article class="dashboard-card card">
+        <span class="section-badge">Workspace</span>
+        <h1>Welcome back, {{ user.get_full_name }}.</h1>
+        <p>
+            Your account layer is in place. Next up are projects, uploads, and the transaction parsing workflow.
+        </p>
+    </article>
+
+    <section class="dashboard-grid" aria-label="Workspace roadmap">
+        <article class="card">
+            <p class="feature-card__eyebrow">Projects</p>
+            <h2>Create a workspace</h2>
+            <p>Start a project that will hold uploads, mappings, and review state.</p>
+        </article>
+        <article class="card">
+            <p class="feature-card__eyebrow">Uploads</p>
+            <h2>Connect source files</h2>
+            <p>Bring in CSV and XLSX exports from banks, cards, and accounting tools.</p>
+        </article>
+        <article class="card">
+            <p class="feature-card__eyebrow">Review</p>
+            <h2>Normalize transactions</h2>
+            <p>Prepare the account layer that the parser and matching workflow will build on next.</p>
+        </article>
+    </section>
+</section>
+{% endblock content %}

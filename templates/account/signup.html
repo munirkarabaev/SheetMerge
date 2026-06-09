@@ -1,0 +1,64 @@
+{% extends "core/base.html" %}
+{% load socialaccount %}
+
+{% block title %}Sign Up | SheetMerge{% endblock title %}
+
+{% block content %}
+<section class="auth-shell">
+    <div class="auth-card card">
+        <div class="auth-stack">
+            <span class="section-badge">Create account</span>
+            <h1>Set up your SheetMerge account.</h1>
+            <p>
+                Start with email and password, or create your account with Google.
+            </p>
+        </div>
+
+        <form class="auth-form" method="post" action="{% url 'account_signup' %}">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="field-errors">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="field-group">
+                <label for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="field-errors">{{ form.email.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="field-group">
+                <label for="{{ form.password1.id_for_label }}">Password</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                    <div class="field-errors">{{ form.password1.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="field-group">
+                <label for="{{ form.password2.id_for_label }}">Confirm password</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                    <div class="field-errors">{{ form.password2.errors }}</div>
+                {% endif %}
+            </div>
+
+            <button class="button button--primary button--full" type="submit">Create account</button>
+        </form>
+
+        <div class="oauth-divider">or</div>
+
+        <form class="oauth-form" method="post" action="{% provider_login_url 'google' %}">
+            {% csrf_token %}
+            <button class="button button--secondary button--full" type="submit">
+                Sign up with Google
+            </button>
+        </form>
+
+        <p class="auth-helper">
+            Already have an account? <a href="{% url 'account_login' %}">Log in</a>.
+        </p>
+    </div>
+</section>
+{% endblock content %}
