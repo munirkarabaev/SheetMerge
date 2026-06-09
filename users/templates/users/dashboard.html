@@ -13,6 +13,9 @@
         <p>
             Projects owned by your account: <strong>{{ project_count }}</strong>
         </p>
+        <p>
+            <a class="button button--primary" href="{% url 'core:project_list' %}">Open projects</a>
+        </p>
     </article>
 
     <section class="dashboard-grid" aria-label="Workspace roadmap">

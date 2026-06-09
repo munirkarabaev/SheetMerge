@@ -624,6 +624,36 @@ a {
     font-weight: 600;
 }
 
+.project-form {
+    display: grid;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+}
+
+.project-form textarea {
+    width: 100%;
+    min-height: 7rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid rgba(28, 91, 46, 0.18);
+    border-radius: 0.5rem;
+    background: #ffffff;
+    color: #111827;
+    font: inherit;
+    resize: vertical;
+    outline: none;
+}
+
+.project-form textarea:focus {
+    border-color: #1c5b2e;
+}
+
+.project-form__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
 .dashboard-shell {
     display: grid;
     gap: var(--space-8);

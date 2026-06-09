@@ -6,14 +6,14 @@
 
     <nav class="topnav" aria-label="Primary navigation">
         <a class="topnav__link topnav__link--active" href="{% url 'core:home' %}">Home</a>
-        <a class="topnav__link" href="#">Projects</a>
+        <a class="topnav__link" href="{% url 'core:project_list' %}">Projects</a>
         <a class="topnav__link" href="#">Uploads</a>
         <a class="topnav__link" href="#">Transactions</a>
     </nav>
 
     {% if user.is_authenticated %}
         <div class="topbar__actions">
-            <a class="button button--secondary" href="{% url 'users:dashboard' %}">Dashboard</a>
+            <a class="button button--secondary" href="{% url 'core:project_list' %}">Projects</a>
             <form action="{% url 'account_logout' %}" method="post">
                 {% csrf_token %}
                 <button class="button button--primary" type="submit">Log out</button>

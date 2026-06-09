@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+
+{% block title %}{{ project.name }} | SheetMerge{% endblock title %}
+
+{% block content %}
+<section class="dashboard-shell">
+    <article class="dashboard-card card">
+        <span class="section-badge">Project workspace</span>
+        <h1>{{ project.name }}</h1>
+        <p>{{ project.description|default:"No description has been added yet." }}</p>
+        <p>Owner: <strong>{{ project.owner.email }}</strong></p>
+    </article>
+
+    <section class="dashboard-grid" aria-label="Project next steps">
+        <article class="card">
+            <p class="feature-card__eyebrow">Uploads</p>
+            <h2>Upload files next</h2>
+            <p>This workspace is ready for the file-upload step.</p>
+        </article>
+        <article class="card">
+            <p class="feature-card__eyebrow">Mapping</p>
+            <h2>Column mapping later</h2>
+            <p>Detected columns and normalization will attach to this project.</p>
+        </article>
+        <article class="card">
+            <p class="feature-card__eyebrow">Review</p>
+            <h2>Transaction review later</h2>
+            <p>This page is the placeholder for the future project workflow.</p>
+        </article>
+    </section>
+</section>
+{% endblock content %}
