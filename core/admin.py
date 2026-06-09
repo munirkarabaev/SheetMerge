@@ -9,5 +9,5 @@ from core.models import Project
 class ProjectAdmin(admin.ModelAdmin):
     """Admin configuration for project records."""
 
-    list_display = ("name", "created_at", "updated_at")
-    search_fields = ("name",)
+    list_display = ("name", "owner", "created_at", "updated_at")
+    search_fields = ("name", "owner__email")
