@@ -3,57 +3,88 @@
 
 {% block title %}Log In | SheetMerge{% endblock title %}
 
-{% block content %}
-<section class="auth-shell">
-    <div class="auth-card card">
-        <div class="auth-stack">
-            <span class="section-badge">Account access</span>
-            <h1>Log in to your SheetMerge workspace.</h1>
-            <p>
-                Sign in with email and password or use Google to get into your project workspace.
+{% block page_shell %}
+<div class="auth-layout">
+    <aside class="brand-panel">
+        <div class="brand-logo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2"/>
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <span>SheetMerge</span>
+        </div>
+
+        <div class="brand-content">
+            <p class="brand-label">AI Financial Workspace</p>
+            <h1 class="brand-heading">One format for fragmented transaction files.</h1>
+            <p class="brand-sub">
+                Upload messy CSVs. AI detects, maps, and merges your data into a single clean spreadsheet.
             </p>
         </div>
 
-        <form class="auth-form" method="post" action="{% url 'account_login' %}">
-            {% csrf_token %}
-            {% if form.non_field_errors %}
-                <div class="field-errors">{{ form.non_field_errors }}</div>
+        <p class="brand-footer">© 2026 SheetMerge Inc.</p>
+    </aside>
+
+    <main class="form-panel">
+        <div class="form-inner">
+            <h1 class="form-title">Welcome back</h1>
+            <p class="form-subtitle">Sign in to your account to continue</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert">{{ message }}</div>
+                {% endfor %}
             {% endif %}
 
-            <div class="field-group">
-                <label for="{{ form.login.id_for_label }}">Email</label>
-                {{ form.login }}
-                {% if form.login.errors %}
-                    <div class="field-errors">{{ form.login.errors }}</div>
+            {% if form.non_field_errors %}
+                <div class="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <form method="post" action="{% url 'account_login' %}" novalidate>
+                {% csrf_token %}
+                {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
                 {% endif %}
-            </div>
 
-            <div class="field-group">
-                <label for="{{ form.password.id_for_label }}">Password</label>
-                {{ form.password }}
-                {% if form.password.errors %}
-                    <div class="field-errors">{{ form.password.errors }}</div>
-                {% endif %}
-            </div>
+                <div class="field">
+                    <label for="{{ form.login.id_for_label }}">Email</label>
+                    {{ form.login }}
+                    {% if form.login.errors %}
+                        <p class="field-error">{{ form.login.errors|striptags }}</p>
+                    {% endif %}
+                </div>
 
-            <button class="button button--primary button--full" type="submit">Log in</button>
-        </form>
+                <div class="field">
+                    <label for="{{ form.password.id_for_label }}">Password</label>
+                    <a href="{% url 'account_reset_password' %}" class="forgot">Forgot password?</a>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                        <p class="field-error">{{ form.password.errors|striptags }}</p>
+                    {% endif %}
+                </div>
 
-        <div class="oauth-divider">or</div>
+                <button type="submit" class="btn-primary">Sign in</button>
+            </form>
 
-        <form class="oauth-form" method="post" action="{% provider_login_url 'google' %}">
-            {% csrf_token %}
-            <button class="button button--secondary button--full" type="submit">
-                Continue with Google
-            </button>
-        </form>
+            {% if google_oauth_enabled %}
+                <div class="auth-divider">or continue with</div>
 
-        <p class="auth-helper">
-            New here? <a href="{% url 'account_signup' %}">Create an account</a>.
-        </p>
-        <p class="auth-helper">
-            Need access to the admin? <a href="/admin/login/">Use Django admin login</a>.
-        </p>
-    </div>
-</section>
-{% endblock content %}
+                <form method="post" action="{% provider_login_url 'google' %}" class="oauth-row">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-secondary">Continue with Google</button>
+                </form>
+            {% else %}
+                <div class="oauth-note">
+                    <p class="oauth-note__title">Google sign-in is available once OAuth is configured.</p>
+                    <p>Set `GOOGLE_OAUTH_CLIENT_ID` and `GOOGLE_OAUTH_CLIENT_SECRET` for local development.</p>
+                    <p class="oauth-note__mono">Callback URL: http://127.0.0.1:8000/accounts/google/login/callback/</p>
+                </div>
+            {% endif %}
+
+            <p class="switch-link">
+                Don&#39;t have an account? <a href="{% url 'account_signup' %}">Create one</a>
+            </p>
+        </div>
+    </main>
+</div>
+{% endblock page_shell %}

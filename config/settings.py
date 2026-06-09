@@ -60,6 +60,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'users.context_processors.authentication_context',
             ],
         },
     },
@@ -87,10 +88,20 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 
+EMAIL_BACKEND = os.environ.get(
+    'DJANGO_EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+DEFAULT_FROM_EMAIL = os.environ.get('DJANGO_DEFAULT_FROM_EMAIL', 'noreply@sheetmerge.local')
+
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_REQUIRED = True
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_LOGIN_ON_GET = False
+GOOGLE_OAUTH_ENABLED = bool(
+    os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
+    and os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET')
+)
 
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
@@ -99,13 +110,15 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'OAUTH_PKCE_ENABLED': True,
-        'APP': {
-            'client_id': os.environ.get('GOOGLE_OAUTH_CLIENT_ID', 'google-client-id'),
-            'secret': os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', 'google-client-secret'),
-            'key': '',
-        },
     },
 }
+
+if GOOGLE_OAUTH_ENABLED:
+    SOCIALACCOUNT_PROVIDERS['google']['APP'] = {
+        'client_id': os.environ['GOOGLE_OAUTH_CLIENT_ID'],
+        'secret': os.environ['GOOGLE_OAUTH_CLIENT_SECRET'],
+        'key': '',
+    }
 
 
 # Database

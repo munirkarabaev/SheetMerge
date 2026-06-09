@@ -1,6 +1,7 @@
 """Tests for authentication and authenticated pages."""
 
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
@@ -12,22 +13,22 @@ class AuthenticationViewTests(TestCase):
     """Verify the login and signup pages plus dashboard access rules."""
 
     def test_login_page_renders_credentials_and_google_cta(self) -> None:
-        """The login page should render both login methods."""
+        """The login page should render the default auth path safely."""
 
         response = self.client.get(reverse("account_login"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Continue with Google")
-        self.assertContains(response, "Log in")
+        self.assertContains(response, "Welcome back")
+        self.assertContains(response, "Google sign-in is available once OAuth is configured.")
 
     def test_signup_page_renders_email_signup_and_google_cta(self) -> None:
-        """The signup page should render both signup methods."""
+        """The signup page should render the default signup path safely."""
 
         response = self.client.get(reverse("account_signup"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Create account")
-        self.assertContains(response, "Sign up with Google")
+        self.assertContains(response, "Create your account")
+        self.assertContains(response, "Google sign-up is available once OAuth is configured.")
 
     def test_dashboard_requires_authentication(self) -> None:
         """Anonymous users should be redirected to the login page."""
@@ -52,6 +53,22 @@ class AuthenticationViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Welcome back")
+
+    def test_signup_post_creates_user(self) -> None:
+        """Submitting the signup form should create a new user."""
+
+        response = self.client.post(
+            reverse("account_signup"),
+            {
+                "email": "new-user@example.com",
+                "password1": "test-pass-123",
+                "password2": "test-pass-123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(email="new-user@example.com").exists())
+        self.assertLessEqual(len(mail.outbox), 1)
 
 
 class HomePageRedirectTests(TestCase):

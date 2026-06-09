@@ -14,14 +14,16 @@
     <link rel="stylesheet" href="{% static 'core/css/app.css' %}">
 </head>
 <body>
-    <div class="site-shell">
-        <header class="site-header">
-            {% include "core/includes/navbar.html" %}
-        </header>
+    {% block page_shell %}
+        <div class="site-shell">
+            <header class="site-header">
+                {% include "core/includes/navbar.html" %}
+            </header>
 
-        <main class="site-main">
-            {% block content %}{% endblock content %}
-        </main>
-    </div>
+            <main class="site-main">
+                {% block content %}{% endblock content %}
+            </main>
+        </div>
+    {% endblock page_shell %}
 </body>
 </html>
