@@ -1,22 +1,22 @@
 {% extends "core/base.html" %}
 
-{% block title %}Create Project | SheetMerge{% endblock title %}
+{% block title %}Create Mergeset | SheetMerge{% endblock title %}
 
 {% block content %}
 <section class="dashboard-shell">
     <article class="dashboard-card card">
-        <span class="section-badge">Create project</span>
-        <h1>Start a new workspace</h1>
-        <p>This is the minimum project setup flow for now.</p>
+        <span class="section-badge">Create mergeset</span>
+        <h1>Start a new merge job</h1>
+        <p>This is the minimum mergeset setup flow for now.</p>
 
-        <form class="project-form" method="post">
+        <form class="mergeset-form" method="post">
             {% csrf_token %}
             {% if form.non_field_errors %}
                 <div class="alert">{{ form.non_field_errors }}</div>
             {% endif %}
 
             <div class="field">
-                <label for="{{ form.name.id_for_label }}">Project name</label>
+                <label for="{{ form.name.id_for_label }}">Mergeset name</label>
                 {{ form.name }}
                 {% if form.name.errors %}
                     <p class="field-error">{{ form.name.errors|striptags }}</p>
@@ -31,9 +31,9 @@
                 {% endif %}
             </div>
 
-            <div class="project-form__actions">
-                <button class="btn-primary" type="submit">Create project</button>
-                <a class="button button--secondary" href="{% url 'core:project_list' %}">Cancel</a>
+            <div class="mergeset-form__actions">
+                <button class="btn-primary" type="submit">Create mergeset</button>
+                <a class="button button--secondary" href="{% url 'core:mergeset_list' %}">Cancel</a>
             </div>
         </form>
     </article>

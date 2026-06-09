@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+
+{% block title %}Mergesets | SheetMerge{% endblock title %}
+
+{% block content %}
+<section class="dashboard-shell">
+    <article class="dashboard-card card">
+        <span class="section-badge">Mergesets</span>
+        <h1>Your merge jobs</h1>
+        <p>Mergesets are private to your account and hold the files and review state for one merge job.</p>
+        <p>
+            <a class="button button--primary" href="{% url 'core:mergeset_create' %}">New mergeset</a>
+        </p>
+    </article>
+
+    {% if mergesets %}
+        <section class="dashboard-grid" aria-label="Mergeset list">
+            {% for mergeset in mergesets %}
+                <article class="card">
+                    <p class="feature-card__eyebrow">Mergeset</p>
+                    <h2>{{ mergeset.name }}</h2>
+                    <p>{{ mergeset.description|default:"No description yet." }}</p>
+                    <p>
+                        <a class="button button--secondary" href="{% url 'core:mergeset_detail' mergeset.pk %}">Open</a>
+                    </p>
+                </article>
+            {% endfor %}
+        </section>
+    {% else %}
+        <article class="dashboard-card card">
+            <p class="feature-card__eyebrow">Empty state</p>
+            <h2>No mergesets yet</h2>
+            <p>Create your first mergeset to start testing the authenticated workflow.</p>
+        </article>
+    {% endif %}
+</section>
+{% endblock content %}

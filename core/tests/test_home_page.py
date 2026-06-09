@@ -29,4 +29,6 @@ class HomePageTests(TestCase):
 
         self.assertContains(response, "SheetMerge")
         self.assertContains(response, "Home")
-        self.assertContains(response, "Projects")
+        self.assertContains(response, "Mergesets")
+        self.assertContains(response, "Billing")
+        self.assertContains(response, "Support")

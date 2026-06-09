@@ -2,13 +2,22 @@
 
 from django.urls import path
 
-from core.views import HomePageView, ProjectCreateView, ProjectDetailView, ProjectListView
+from core.views import (
+    BillingPageView,
+    HomePageView,
+    MergesetCreateView,
+    MergesetDetailView,
+    MergesetListView,
+    SupportPageView,
+)
 
 app_name = "core"
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
-    path("projects/", ProjectListView.as_view(), name="project_list"),
-    path("projects/new/", ProjectCreateView.as_view(), name="project_create"),
-    path("projects/<int:pk>/", ProjectDetailView.as_view(), name="project_detail"),
+    path("mergesets/", MergesetListView.as_view(), name="mergeset_list"),
+    path("mergesets/new/", MergesetCreateView.as_view(), name="mergeset_create"),
+    path("mergesets/<int:pk>/", MergesetDetailView.as_view(), name="mergeset_detail"),
+    path("billing/", BillingPageView.as_view(), name="billing"),
+    path("support/", SupportPageView.as_view(), name="support"),
 ]

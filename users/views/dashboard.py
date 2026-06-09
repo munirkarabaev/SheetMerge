@@ -3,7 +3,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 
-from core.models import Project
+from core.models import Mergeset
 
 
 class DashboardPageView(LoginRequiredMixin, TemplateView):
@@ -12,8 +12,8 @@ class DashboardPageView(LoginRequiredMixin, TemplateView):
     template_name = "users/dashboard.html"
 
     def get_context_data(self, **kwargs):
-        """Expose the current user's project count."""
+        """Expose the current user's mergeset count."""
 
         context = super().get_context_data(**kwargs)
-        context["project_count"] = Project.objects.filter(owner=self.request.user).count()
+        context["mergeset_count"] = Mergeset.objects.filter(owner=self.request.user).count()
         return context

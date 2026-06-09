@@ -1,5 +1,5 @@
 """Model exports for the core application."""
 
-from core.models.project import Project
+from core.models.mergeset import Mergeset
 
-__all__ = ["Project"]
+__all__ = ["Mergeset"]

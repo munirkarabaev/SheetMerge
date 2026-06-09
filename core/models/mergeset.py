@@ -1,16 +1,16 @@
-"""Project domain models."""
+"""Mergeset domain models."""
 
 from django.conf import settings
 from django.db import models
 
 
-class Project(models.Model):
-    """Represents a user workspace for future imports and transaction cleanup."""
+class Mergeset(models.Model):
+    """Represents one merge job containing files and review state."""
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="projects",
+        related_name="mergesets",
     )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)

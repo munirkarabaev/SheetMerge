@@ -1,11 +1,14 @@
 """View exports for the core application."""
 
 from core.views.home import HomePageView
-from core.views.projects import ProjectCreateView, ProjectDetailView, ProjectListView
+from core.views.mergesets import MergesetCreateView, MergesetDetailView, MergesetListView
+from core.views.pages import BillingPageView, SupportPageView
 
 __all__ = [
+    "BillingPageView",
     "HomePageView",
-    "ProjectCreateView",
-    "ProjectDetailView",
-    "ProjectListView",
+    "MergesetCreateView",
+    "MergesetDetailView",
+    "MergesetListView",
+    "SupportPageView",
 ]

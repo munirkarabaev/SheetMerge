@@ -53,6 +53,7 @@ class AuthenticationViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Welcome back")
+        self.assertContains(response, "Mergesets owned by your account")
 
     def test_signup_post_creates_user(self) -> None:
         """Submitting the signup form should create a new user."""

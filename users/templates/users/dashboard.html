@@ -8,21 +8,21 @@
         <span class="section-badge">Workspace</span>
         <h1>Welcome back, {{ user.get_full_name }}.</h1>
         <p>
-            Your account layer is in place. Next up are projects, uploads, and the transaction parsing workflow.
+            Your account layer is in place. Next up are mergesets, uploads, and the transaction parsing workflow.
         </p>
         <p>
-            Projects owned by your account: <strong>{{ project_count }}</strong>
+            Mergesets owned by your account: <strong>{{ mergeset_count }}</strong>
         </p>
         <p>
-            <a class="button button--primary" href="{% url 'core:project_list' %}">Open projects</a>
+            <a class="button button--primary" href="{% url 'core:mergeset_list' %}">Open mergesets</a>
         </p>
     </article>
 
     <section class="dashboard-grid" aria-label="Workspace roadmap">
         <article class="card">
-            <p class="feature-card__eyebrow">Projects</p>
-            <h2>Create a workspace</h2>
-            <p>Start a project that will hold uploads, mappings, and review state.</p>
+            <p class="feature-card__eyebrow">Mergesets</p>
+            <h2>Create a merge job</h2>
+            <p>Start a mergeset that will hold uploads, mappings, and review state.</p>
         </article>
         <article class="card">
             <p class="feature-card__eyebrow">Uploads</p>
