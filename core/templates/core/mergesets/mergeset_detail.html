@@ -2,78 +2,220 @@
 
 {% block title %}{{ mergeset.name }} | SheetMerge{% endblock title %}
 
-{% block content %}
-<section class="dashboard-shell">
-    <article class="dashboard-card card">
-        <span class="section-badge">Mergeset workspace</span>
-        <h1>{{ mergeset.name }}</h1>
-        <p>{{ mergeset.description|default:"No description has been added yet." }}</p>
-        <p>Owner: <strong>{{ mergeset.owner.email }}</strong></p>
-    </article>
+{% block page_shell %}
+<div class="ws-shell">
+    <header class="ws-nav">
+        <div class="ws-nav-left">
+            <a class="ws-logo" href="{% url 'users:dashboard' %}">
+                <span class="ws-logo-mark" aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M3 9h18M9 21V9"/>
+                    </svg>
+                </span>
+                <span class="ws-logo-name">SheetMerge</span>
+            </a>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="notice">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-
-    <section class="upload-workspace card" aria-labelledby="source-files-heading">
-        <div>
-            <p class="feature-card__eyebrow">Source files</p>
-            <h2 id="source-files-heading">Upload spreadsheets</h2>
-            <p>Add one or more CSV or XLSX files. Each file can be up to 10 MB.</p>
+            <nav class="ws-breadcrumb" aria-label="Breadcrumb">
+                <a href="{% url 'core:mergeset_list' %}"
+                   class="topnav__link topnav__link--active"
+                   aria-current="page">Mergesets</a>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+                <span class="ws-breadcrumb-active">{{ mergeset.name }}</span>
+            </nav>
         </div>
 
-        <form
-            class="upload-form"
-            method="post"
-            enctype="multipart/form-data"
-            action="{% url 'core:mergeset_file_upload' mergeset.pk %}"
-        >
-            {% csrf_token %}
-            <div class="field">
-                <label for="{{ upload_form.files.id_for_label }}">Choose source files</label>
-                {{ upload_form.files }}
-                {% if upload_form.files.errors %}
-                    <p class="field-error">{{ upload_form.files.errors|striptags }}</p>
+        <div class="ws-nav-right">
+            <a href="{% url 'core:billing' %}" class="ws-nav-btn">Settings</a>
+            <span class="ws-nav-divider" aria-hidden="true"></span>
+            <form method="post" action="{% url 'account_logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="ws-nav-btn">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="ws-body">
+        <aside class="ws-sidebar">
+            <div class="ws-sidebar-section">
+                <div class="ws-sidebar-heading">
+                    <span>Mergesets</span>
+                    <a href="{% url 'core:mergeset_create' %}" class="ws-sidebar-add" title="New mergeset">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                             stroke-linejoin="round" aria-hidden="true">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        <span class="ws-visually-hidden">New mergeset</span>
+                    </a>
+                </div>
+
+                <nav class="ws-sidebar-nav" aria-label="Your mergesets">
+                    {% for item in mergeset.owner.mergesets.all %}
+                        <a href="{% url 'core:mergeset_detail' item.pk %}"
+                           class="ws-sidebar-item{% if item.pk == mergeset.pk %} ws-sidebar-item--active{% endif %}">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" aria-hidden="true">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span>{{ item.name }}</span>
+                        </a>
+                    {% endfor %}
+                </nav>
+            </div>
+
+            <div class="ws-sidebar-divider"></div>
+
+            <div class="ws-sidebar-section">
+                <div class="ws-sidebar-heading"><span>Workflow</span></div>
+                <div class="ws-steps">
+                    <div class="ws-step ws-step--active">
+                        <div class="ws-step-track">
+                            <div class="ws-step-dot ws-step-dot--active"></div>
+                            <div class="ws-step-line"></div>
+                        </div>
+                        <div class="ws-step-body">
+                            <p class="ws-step-label">Uploads</p>
+                            <p class="ws-step-title">Add source files</p>
+                        </div>
+                    </div>
+
+                    <div class="ws-step">
+                        <div class="ws-step-track">
+                            <div class="ws-step-dot"></div>
+                            <div class="ws-step-line"></div>
+                        </div>
+                        <div class="ws-step-body">
+                            <p class="ws-step-label">Mapping</p>
+                            <p class="ws-step-title ws-step-title--muted">Column mapping</p>
+                        </div>
+                    </div>
+
+                    <div class="ws-step">
+                        <div class="ws-step-track">
+                            <div class="ws-step-dot"></div>
+                        </div>
+                        <div class="ws-step-body">
+                            <p class="ws-step-label">Review</p>
+                            <p class="ws-step-title ws-step-title--muted">Transaction review</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="ws-main">
+            <div class="ws-content">
+                <header class="ws-page-header">
+                    <span class="ws-badge">Mergeset workspace</span>
+                    <h1 class="ws-page-title">{{ mergeset.name }}</h1>
+                    <p class="ws-page-meta">
+                        {{ mergeset.description|default:"No description has been added yet." }}
+                        &middot;
+                        <span class="mono">owner: {{ mergeset.owner.email }}</span>
+                    </p>
+                </header>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="ws-alert ws-alert--{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
+                <section class="ws-card" aria-labelledby="upload-heading">
+                    <div class="ws-card-header">
+                        <p class="ws-eyebrow">Source files</p>
+                        <h2 class="ws-card-title" id="upload-heading">Upload spreadsheets</h2>
+                        <p class="ws-card-sub">CSV or XLSX files &middot; up to 10 MB each</p>
+                    </div>
+
+                    <div class="ws-card-body">
+                        <form method="post"
+                              enctype="multipart/form-data"
+                              action="{% url 'core:mergeset_file_upload' mergeset.pk %}"
+                              class="ws-upload-form">
+                            {% csrf_token %}
+                            <label class="ws-dropzone" for="{{ upload_form.files.id_for_label }}">
+                                <span class="ws-dropzone-icon" aria-hidden="true">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                         stroke="currentColor" stroke-width="1.75"
+                                         stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                </span>
+                                <span class="ws-dropzone-text">
+                                    <span>Choose files to upload</span>
+                                    <span class="ws-dropzone-sub">Supports .csv and .xlsx</span>
+                                </span>
+                                <span class="ws-browse-btn">Browse files</span>
+                            </label>
+                            {{ upload_form.files }}
+                            {% if upload_form.files.errors %}
+                                <p class="ws-field-error">{{ upload_form.files.errors|striptags }}</p>
+                            {% endif %}
+                            <button type="submit" class="ws-btn-primary">Upload files</button>
+                        </form>
+                    </div>
+                </section>
+
+                {% if mergeset.source_files.all %}
+                    <section class="ws-card" aria-labelledby="uploaded-files-heading">
+                        <div class="ws-card-header ws-card-header--row">
+                            <div>
+                                <p class="ws-eyebrow">Uploaded</p>
+                                <h2 class="ws-card-title" id="uploaded-files-heading">Source files</h2>
+                            </div>
+                            <span class="ws-count-badge">
+                                {{ mergeset.source_files.count }}
+                                file{{ mergeset.source_files.count|pluralize }}
+                            </span>
+                        </div>
+
+                        <div class="ws-table-wrap">
+                            <table class="ws-table">
+                                <thead>
+                                    <tr>
+                                        <th>Filename</th>
+                                        <th>Size</th>
+                                        <th>Rows detected</th>
+                                        <th>Uploaded</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for source_file in mergeset.source_files.all %}
+                                        <tr>
+                                            <td class="ws-filename">
+                                                <svg width="13" height="13" viewBox="0 0 24 24"
+                                                     fill="none" stroke="#107C41" stroke-width="2"
+                                                     stroke-linecap="round" stroke-linejoin="round"
+                                                     aria-hidden="true">
+                                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                                    <path d="M3 9h18M9 21V9"/>
+                                                </svg>
+                                                {{ source_file.original_name }}
+                                            </td>
+                                            <td class="mono">{{ source_file.file_size|filesizeformat }}</td>
+                                            <td class="mono muted">&mdash;</td>
+                                            <td class="mono muted">{{ source_file.uploaded_at|date:"M j, Y" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                {% else %}
+                    <p class="ws-empty">No source files uploaded yet.</p>
                 {% endif %}
             </div>
-            <button class="button button--primary" type="submit">Upload files</button>
-        </form>
-
-        {% if mergeset.source_files.all %}
-            <div class="source-file-list">
-                {% for source_file in mergeset.source_files.all %}
-                    <article class="source-file">
-                        <div>
-                            <strong>{{ source_file.original_name }}</strong>
-                            <p>{{ source_file.file_size|filesizeformat }}</p>
-                        </div>
-                        <span class="status-pill">Uploaded</span>
-                    </article>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="empty-note">No source files uploaded yet.</p>
-        {% endif %}
-    </section>
-
-    <section class="dashboard-grid" aria-label="Mergeset next steps">
-        <article class="card">
-            <p class="feature-card__eyebrow">Uploads</p>
-            <h2>Add source files</h2>
-            <p>Upload the CSV and XLSX files that belong in this merge job.</p>
-        </article>
-        <article class="card">
-            <p class="feature-card__eyebrow">Mapping</p>
-            <h2>Column mapping later</h2>
-            <p>Detected columns and normalization will attach to this mergeset.</p>
-        </article>
-        <article class="card">
-            <p class="feature-card__eyebrow">Review</p>
-            <h2>Transaction review later</h2>
-            <p>This page is the placeholder for the future mergeset workflow.</p>
-        </article>
-    </section>
-</section>
-{% endblock content %}
+        </main>
+    </div>
+</div>
+{% endblock page_shell %}

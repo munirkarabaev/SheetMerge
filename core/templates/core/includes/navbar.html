@@ -5,10 +5,26 @@
     </a>
 
     <nav class="topnav" aria-label="Primary navigation">
-        <a class="topnav__link topnav__link--active" href="{% url 'core:home' %}">Home</a>
-        <a class="topnav__link" href="{% url 'core:mergeset_list' %}">Mergesets</a>
-        <a class="topnav__link" href="{% url 'core:billing' %}">Billing</a>
-        <a class="topnav__link" href="{% url 'core:support' %}">Support</a>
+        <a
+            class="topnav__link{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'dashboard' %} topnav__link--active{% endif %}"
+            href="{% url 'core:home' %}"
+            {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}
+        >Home</a>
+        <a
+            class="topnav__link{% if request.resolver_match.url_name == 'mergeset_list' or request.resolver_match.url_name == 'mergeset_create' or request.resolver_match.url_name == 'mergeset_detail' or request.resolver_match.url_name == 'mergeset_file_upload' %} topnav__link--active{% endif %}"
+            href="{% url 'core:mergeset_list' %}"
+            {% if request.resolver_match.url_name == 'mergeset_list' or request.resolver_match.url_name == 'mergeset_create' or request.resolver_match.url_name == 'mergeset_detail' or request.resolver_match.url_name == 'mergeset_file_upload' %}aria-current="page"{% endif %}
+        >Mergesets</a>
+        <a
+            class="topnav__link{% if request.resolver_match.url_name == 'billing' %} topnav__link--active{% endif %}"
+            href="{% url 'core:billing' %}"
+            {% if request.resolver_match.url_name == 'billing' %}aria-current="page"{% endif %}
+        >Billing</a>
+        <a
+            class="topnav__link{% if request.resolver_match.url_name == 'support' %} topnav__link--active{% endif %}"
+            href="{% url 'core:support' %}"
+            {% if request.resolver_match.url_name == 'support' %}aria-current="page"{% endif %}
+        >Support</a>
     </nav>
 
     {% if user.is_authenticated %}
