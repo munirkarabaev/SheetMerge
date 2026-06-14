@@ -112,14 +112,24 @@
 
         <main class="ws-main">
             <div class="ws-content">
-                <header class="ws-page-header">
-                    <span class="ws-badge">Mergeset workspace</span>
-                    <h1 class="ws-page-title">{{ mergeset.name }}</h1>
-                    <p class="ws-page-meta">
-                        {{ mergeset.description|default:"No description has been added yet." }}
-                        &middot;
-                        <span class="mono">owner: {{ mergeset.owner.email }}</span>
-                    </p>
+                <header class="ws-page-header ws-page-header--row">
+                    <div>
+                        <span class="ws-badge">Mergeset workspace</span>
+                        <h1 class="ws-page-title">{{ mergeset.name }}</h1>
+                        <p class="ws-page-meta">
+                            {{ mergeset.description|default:"No description has been added yet." }}
+                            &middot;
+                            <span class="mono">owner: {{ mergeset.owner.email }}</span>
+                        </p>
+                    </div>
+                    <form
+                        method="post"
+                        action="{% url 'core:mergeset_delete' mergeset.pk %}"
+                        onsubmit="return confirm('Delete this mergeset and all of its uploaded files?');"
+                    >
+                        {% csrf_token %}
+                        <button type="submit" class="ws-btn-danger">Delete mergeset</button>
+                    </form>
                 </header>
 
                 {% if messages %}
@@ -187,6 +197,7 @@
                                         <th>Size</th>
                                         <th>Rows detected</th>
                                         <th>Uploaded</th>
+                                        <th><span class="ws-visually-hidden">Actions</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -213,6 +224,16 @@
                                                 {% endif %}
                                             </td>
                                             <td class="mono muted">{{ source_file.uploaded_at|date:"M j, Y" }}</td>
+                                            <td class="ws-table-action">
+                                                <form
+                                                    method="post"
+                                                    action="{% url 'core:mergeset_file_delete' mergeset.pk source_file.pk %}"
+                                                    onsubmit="return confirm('Delete {{ source_file.original_name|escapejs }}?');"
+                                                >
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="ws-link-danger">Delete</button>
+                                                </form>
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

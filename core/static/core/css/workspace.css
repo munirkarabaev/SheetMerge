@@ -68,6 +68,7 @@
 .ws-main { flex: 1; overflow-y: auto; padding: 32px 40px; }
 .ws-content { display: flex; flex-direction: column; gap: 16px; max-width: 800px; }
 .ws-page-header { margin-bottom: 8px; }
+.ws-page-header--row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .ws-badge { display: inline-block; padding: 2px 10px; margin-bottom: 10px; border: 1px solid #d1e8da; border-radius: 20px; background: #f0f7f3; color: #107c41; font-size: 11px; font-weight: 500; }
 .ws-page-title { margin-bottom: 4px; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
 .ws-page-meta,
@@ -90,6 +91,8 @@
 .ws-upload-form input[type="file"] { width: 100%; color: #6b7280; font: inherit; font-size: 12px; }
 .ws-btn-primary { display: inline-flex; align-items: center; justify-content: center; width: fit-content; padding: 8px 16px; border: 0; border-radius: 7px; background: #107c41; color: #ffffff; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
 .ws-btn-primary:hover { background: #0d6b37; }
+.ws-btn-danger { padding: 7px 12px; border: 1px solid #fecaca; border-radius: 7px; background: #ffffff; color: #dc2626; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.ws-btn-danger:hover { background: #fef2f2; }
 .ws-field-error { color: #dc2626; font-size: 12px; }
 .ws-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .ws-table th { padding: 8px 24px; border-bottom: 1px solid #f3f4f6; background: #fafafa; font-size: 10px; font-weight: 500; text-align: left; }
@@ -97,6 +100,9 @@
 .ws-table tr:last-child td { border-bottom: 0; }
 .ws-table tr:hover td { background: #fafafa; }
 .ws-filename { display: flex; align-items: center; gap: 8px; color: #111827; font-weight: 600; }
+.ws-table-action { width: 1%; text-align: right; white-space: nowrap; }
+.ws-link-danger { padding: 3px 0; border: 0; background: transparent; color: #dc2626; font: inherit; font-size: 11px; cursor: pointer; }
+.ws-link-danger:hover { color: #991b1b; text-decoration: underline; }
 .ws-alert { padding: 9px 14px; border-radius: 7px; font-size: 12px; }
 .ws-alert--success { border: 1px solid #d1e8da; background: #f0f7f3; color: #107c41; }
 .ws-alert--error { border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; }
@@ -106,7 +112,8 @@
     .ws-nav-right { display: none; }
     .ws-sidebar { width: 176px; }
     .ws-main { padding: 24px 20px; }
-    .ws-dropzone { align-items: flex-start; flex-direction: column; } }
+    .ws-dropzone { align-items: flex-start; flex-direction: column; }
+    .ws-page-header--row { flex-direction: column; } }
 
 @media (max-width: 560px) { .ws-sidebar { display: none; }
     .ws-main { padding: 20px 12px; }

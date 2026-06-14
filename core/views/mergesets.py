@@ -4,8 +4,9 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView
 
 from core.forms import MergesetFileUploadForm, MergesetForm
@@ -63,6 +64,25 @@ class MergesetDetailView(OwnedMergesetQuerysetMixin, DetailView):
         return context
 
 
+class MergesetDeleteView(LoginRequiredMixin, View):
+    """Delete one owner-scoped mergeset and its related records."""
+
+    http_method_names = ["post"]
+
+    def post(self, request, *args, **kwargs):
+        """Delete the mergeset and redirect to the owner's list."""
+
+        mergeset = get_object_or_404(
+            Mergeset,
+            pk=kwargs["pk"],
+            owner=request.user,
+        )
+        mergeset_name = mergeset.name
+        mergeset.delete()
+        messages.success(request, f'Deleted mergeset "{mergeset_name}".')
+        return redirect("core:mergeset_list")
+
+
 class MergesetFileUploadView(LoginRequiredMixin, FormView):
     """Store validated source files on an owner-scoped mergeset."""
 
@@ -116,3 +136,24 @@ class MergesetFileUploadView(LoginRequiredMixin, FormView):
         """Return to the mergeset after a successful upload."""
 
         return reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
+
+
+class MergesetFileDeleteView(LoginRequiredMixin, View):
+    """Delete one uploaded file from an owner-scoped mergeset."""
+
+    http_method_names = ["post"]
+
+    def post(self, request, *args, **kwargs):
+        """Delete the file record and return to its mergeset."""
+
+        source_file = get_object_or_404(
+            MergesetFile.objects.select_related("mergeset"),
+            pk=kwargs["file_pk"],
+            mergeset_id=kwargs["pk"],
+            mergeset__owner=request.user,
+        )
+        original_name = source_file.original_name
+        mergeset_pk = source_file.mergeset_id
+        source_file.delete()
+        messages.success(request, f'Deleted source file "{original_name}".')
+        return redirect("core:mergeset_detail", pk=mergeset_pk)

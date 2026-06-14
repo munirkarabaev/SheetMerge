@@ -4,6 +4,12 @@
 
 {% block content %}
 <section class="dashboard-shell">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
     <article class="dashboard-card card">
         <span class="section-badge">Mergesets</span>
         <h1>Your merge jobs</h1>
