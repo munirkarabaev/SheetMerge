@@ -11,11 +11,58 @@
         <p>Owner: <strong>{{ mergeset.owner.email }}</strong></p>
     </article>
 
+    {% if messages %}
+        {% for message in messages %}
+            <div class="notice">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <section class="upload-workspace card" aria-labelledby="source-files-heading">
+        <div>
+            <p class="feature-card__eyebrow">Source files</p>
+            <h2 id="source-files-heading">Upload spreadsheets</h2>
+            <p>Add one or more CSV or XLSX files. Each file can be up to 10 MB.</p>
+        </div>
+
+        <form
+            class="upload-form"
+            method="post"
+            enctype="multipart/form-data"
+            action="{% url 'core:mergeset_file_upload' mergeset.pk %}"
+        >
+            {% csrf_token %}
+            <div class="field">
+                <label for="{{ upload_form.files.id_for_label }}">Choose source files</label>
+                {{ upload_form.files }}
+                {% if upload_form.files.errors %}
+                    <p class="field-error">{{ upload_form.files.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <button class="button button--primary" type="submit">Upload files</button>
+        </form>
+
+        {% if mergeset.source_files.all %}
+            <div class="source-file-list">
+                {% for source_file in mergeset.source_files.all %}
+                    <article class="source-file">
+                        <div>
+                            <strong>{{ source_file.original_name }}</strong>
+                            <p>{{ source_file.file_size|filesizeformat }}</p>
+                        </div>
+                        <span class="status-pill">Uploaded</span>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="empty-note">No source files uploaded yet.</p>
+        {% endif %}
+    </section>
+
     <section class="dashboard-grid" aria-label="Mergeset next steps">
         <article class="card">
             <p class="feature-card__eyebrow">Uploads</p>
-            <h2>Upload files next</h2>
-            <p>This mergeset is ready for the file-upload step.</p>
+            <h2>Add source files</h2>
+            <p>Upload the CSV and XLSX files that belong in this merge job.</p>
         </article>
         <article class="card">
             <p class="feature-card__eyebrow">Mapping</p>

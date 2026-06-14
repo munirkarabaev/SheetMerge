@@ -7,6 +7,7 @@ from core.views import (
     HomePageView,
     MergesetCreateView,
     MergesetDetailView,
+    MergesetFileUploadView,
     MergesetListView,
     SupportPageView,
 )
@@ -18,6 +19,11 @@ urlpatterns = [
     path("mergesets/", MergesetListView.as_view(), name="mergeset_list"),
     path("mergesets/new/", MergesetCreateView.as_view(), name="mergeset_create"),
     path("mergesets/<int:pk>/", MergesetDetailView.as_view(), name="mergeset_detail"),
+    path(
+        "mergesets/<int:pk>/files/",
+        MergesetFileUploadView.as_view(),
+        name="mergeset_file_upload",
+    ),
     path("billing/", BillingPageView.as_view(), name="billing"),
     path("support/", SupportPageView.as_view(), name="support"),
 ]

@@ -1,11 +1,15 @@
 """Views for authenticated mergeset workflows."""
 
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse
-from django.views.generic import CreateView, DetailView, ListView
+from pathlib import Path
 
-from core.forms import MergesetForm
-from core.models import Mergeset
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.views.generic import CreateView, DetailView, FormView, ListView
+
+from core.forms import MergesetFileUploadForm, MergesetForm
+from core.models import Mergeset, MergesetFile
 
 
 class OwnedMergesetQuerysetMixin(LoginRequiredMixin):
@@ -49,3 +53,62 @@ class MergesetDetailView(OwnedMergesetQuerysetMixin, DetailView):
     model = Mergeset
     template_name = "core/mergesets/mergeset_detail.html"
     context_object_name = "mergeset"
+
+    def get_context_data(self, **kwargs):
+        """Add the source-file upload form to the workspace."""
+
+        context = super().get_context_data(**kwargs)
+        context["upload_form"] = MergesetFileUploadForm()
+        return context
+
+
+class MergesetFileUploadView(LoginRequiredMixin, FormView):
+    """Store validated source files on an owner-scoped mergeset."""
+
+    form_class = MergesetFileUploadForm
+    template_name = "core/mergesets/mergeset_detail.html"
+    http_method_names = ["post"]
+
+    def dispatch(self, request, *args, **kwargs):
+        """Resolve the mergeset while enforcing ownership."""
+
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        self.mergeset = get_object_or_404(
+            Mergeset,
+            pk=kwargs["pk"],
+            owner=request.user,
+        )
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        """Persist each uploaded source file under the current mergeset."""
+
+        for uploaded_file in form.cleaned_data["files"]:
+            MergesetFile.objects.create(
+                mergeset=self.mergeset,
+                file=uploaded_file,
+                original_name=Path(uploaded_file.name).name,
+                file_size=uploaded_file.size,
+            )
+
+        messages.success(
+            self.request,
+            f"Uploaded {len(form.cleaned_data['files'])} source file(s).",
+        )
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        """Render validation errors inside the mergeset workspace."""
+
+        return self.render_to_response(
+            {
+                "mergeset": self.mergeset,
+                "upload_form": form,
+            }
+        )
+
+    def get_success_url(self):
+        """Return to the mergeset after a successful upload."""
+
+        return reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
