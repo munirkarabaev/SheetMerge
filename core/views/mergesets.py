@@ -10,6 +10,7 @@ from django.views.generic import CreateView, DetailView, FormView, ListView
 
 from core.forms import MergesetFileUploadForm, MergesetForm
 from core.models import Mergeset, MergesetFile
+from core.services import parse_mergeset_file
 
 
 class OwnedMergesetQuerysetMixin(LoginRequiredMixin):
@@ -82,19 +83,22 @@ class MergesetFileUploadView(LoginRequiredMixin, FormView):
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        """Persist each uploaded source file under the current mergeset."""
+        """Persist and parse each uploaded CSV under the current mergeset."""
 
+        parsed_count = 0
         for uploaded_file in form.cleaned_data["files"]:
-            MergesetFile.objects.create(
+            source_file = MergesetFile.objects.create(
                 mergeset=self.mergeset,
                 file=uploaded_file,
                 original_name=Path(uploaded_file.name).name,
                 file_size=uploaded_file.size,
             )
+            parsed_count += parse_mergeset_file(source_file)
 
         messages.success(
             self.request,
-            f"Uploaded {len(form.cleaned_data['files'])} source file(s).",
+            f"Uploaded {len(form.cleaned_data['files'])} source file(s); "
+            f"parsed {parsed_count} successfully.",
         )
         return super().form_valid(form)
 

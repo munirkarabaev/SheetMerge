@@ -56,8 +56,8 @@ class MergesetFileUploadTests(TestCase):
             kwargs={"pk": self.mergeset.pk},
         )
 
-    def test_owner_can_upload_multiple_supported_files(self) -> None:
-        """A single request should store every valid CSV and XLSX file."""
+    def test_owner_can_upload_multiple_csv_files(self) -> None:
+        """A single request should store and parse every valid CSV file."""
 
         self.client.force_login(self.owner)
 
@@ -66,14 +66,7 @@ class MergesetFileUploadTests(TestCase):
             {
                 "files": [
                     SimpleUploadedFile("bank.csv", b"date,amount\n2026-01-01,10"),
-                    SimpleUploadedFile(
-                        "card.xlsx",
-                        b"placeholder workbook content",
-                        content_type=(
-                            "application/vnd.openxmlformats-officedocument."
-                            "spreadsheetml.sheet"
-                        ),
-                    ),
+                    SimpleUploadedFile("card.csv", b"posted,merchant,total\n2026-01-02,Cafe,5"),
                 ]
             },
         )
@@ -85,7 +78,12 @@ class MergesetFileUploadTests(TestCase):
         self.assertEqual(self.mergeset.source_files.count(), 2)
         self.assertSequenceEqual(
             self.mergeset.source_files.values_list("original_name", flat=True),
-            ["bank.csv", "card.xlsx"],
+            ["bank.csv", "card.csv"],
+        )
+        self.assertFalse(
+            self.mergeset.source_files.exclude(
+                parse_status=MergesetFile.ParseStatus.PARSED
+            ).exists()
         )
 
     def test_upload_records_size_and_uses_generated_storage_name(self) -> None:
@@ -103,17 +101,17 @@ class MergesetFileUploadTests(TestCase):
         self.assertTrue(source_file.file.name.endswith(".csv"))
 
     def test_unsupported_file_extension_is_rejected(self) -> None:
-        """Files outside the initial CSV/XLSX scope should not be stored."""
+        """Files outside the CSV-only scope should not be stored."""
 
         self.client.force_login(self.owner)
 
         response = self.client.post(
             self.upload_url,
-            {"files": [SimpleUploadedFile("notes.txt", b"not a spreadsheet")]},
+            {"files": [SimpleUploadedFile("workbook.xlsx", b"not a CSV")]},
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "only CSV and XLSX files are supported")
+        self.assertContains(response, "only CSV files are supported")
         self.assertFalse(MergesetFile.objects.exists())
 
     def test_oversized_file_is_rejected(self) -> None:
@@ -181,3 +179,105 @@ class MergesetFileUploadTests(TestCase):
 
         self.assertContains(response, "bank-january.csv")
         self.assertContains(response, "Uploaded")
+
+    def test_upload_parses_headers_and_row_count(self) -> None:
+        """Successful parsing should store metadata for column mapping."""
+
+        self.client.force_login(self.owner)
+
+        self.client.post(
+            self.upload_url,
+            {
+                "files": [
+                    SimpleUploadedFile(
+                        "bank.csv",
+                        b"\xef\xbb\xbfDate,Description,Amount\n"
+                        b"2026-01-01,Cafe,10\n"
+                        b"2026-01-02,Shop,20\n",
+                    )
+                ]
+            },
+        )
+
+        source_file = MergesetFile.objects.get()
+        self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.PARSED)
+        self.assertEqual(source_file.headers, ["Date", "Description", "Amount"])
+        self.assertEqual(source_file.delimiter, ",")
+        self.assertEqual(source_file.row_count, 2)
+        self.assertEqual(source_file.parse_error, "")
+        self.assertIsNotNone(source_file.parsed_at)
+
+    def test_inconsistent_csv_is_stored_with_parse_error(self) -> None:
+        """A malformed CSV should remain available with a useful error."""
+
+        self.client.force_login(self.owner)
+
+        self.client.post(
+            self.upload_url,
+            {
+                "files": [
+                    SimpleUploadedFile(
+                        "broken.csv",
+                        b"date,description,amount\n2026-01-01,Cafe\n",
+                    )
+                ]
+            },
+        )
+
+        source_file = MergesetFile.objects.get()
+        self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.FAILED)
+        self.assertIsNone(source_file.row_count)
+        self.assertIn("Row 2 has 2 columns; expected 3", source_file.parse_error)
+
+        response = self.client.get(
+            reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
+        )
+        self.assertContains(response, "Parse failed")
+        self.assertContains(response, source_file.parse_error)
+
+    def test_semicolon_delimited_csv_is_detected(self) -> None:
+        """Common CSV delimiters should be detected before row parsing."""
+
+        self.client.force_login(self.owner)
+
+        self.client.post(
+            self.upload_url,
+            {
+                "files": [
+                    SimpleUploadedFile(
+                        "bank.csv",
+                        b"date;description;amount\n2026-01-01;Cafe;10\n",
+                    )
+                ]
+            },
+        )
+
+        source_file = MergesetFile.objects.get()
+        self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.PARSED)
+        self.assertEqual(source_file.headers, ["date", "description", "amount"])
+        self.assertEqual(source_file.delimiter, ";")
+        self.assertEqual(source_file.row_count, 1)
+
+    def test_non_utf8_csv_is_stored_with_parse_error(self) -> None:
+        """Unsupported text encoding should produce a clear parse failure."""
+
+        self.client.force_login(self.owner)
+
+        self.client.post(
+            self.upload_url,
+            {
+                "files": [
+                    SimpleUploadedFile(
+                        "legacy.csv",
+                        b"description,amount\nCaf\xe9,10\n",
+                    )
+                ]
+            },
+        )
+
+        source_file = MergesetFile.objects.get()
+        self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.FAILED)
+        self.assertEqual(
+            source_file.parse_error,
+            "The CSV file must use UTF-8 encoding.",
+        )

@@ -14,7 +14,14 @@ def mergeset_file_upload_path(instance, filename: str) -> str:
 
 
 class MergesetFile(models.Model):
-    """Represents one source spreadsheet uploaded to a mergeset."""
+    """Represents one source CSV uploaded to a mergeset."""
+
+    class ParseStatus(models.TextChoices):
+        """Possible outcomes for source-file parsing."""
+
+        PENDING = "pending", "Pending"
+        PARSED = "parsed", "Parsed"
+        FAILED = "failed", "Failed"
 
     mergeset = models.ForeignKey(
         "core.Mergeset",
@@ -25,6 +32,16 @@ class MergesetFile(models.Model):
     original_name = models.CharField(max_length=255)
     file_size = models.PositiveBigIntegerField()
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    parse_status = models.CharField(
+        max_length=10,
+        choices=ParseStatus.choices,
+        default=ParseStatus.PENDING,
+    )
+    headers = models.JSONField(default=list, blank=True)
+    delimiter = models.CharField(max_length=1, blank=True)
+    row_count = models.PositiveIntegerField(null=True, blank=True)
+    parse_error = models.TextField(blank=True)
+    parsed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         """Model metadata."""

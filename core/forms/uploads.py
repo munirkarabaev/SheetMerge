@@ -6,7 +6,7 @@ from django import forms
 
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
-SUPPORTED_EXTENSIONS = {".csv", ".xlsx"}
+SUPPORTED_EXTENSIONS = {".csv"}
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -28,13 +28,13 @@ class MultipleFileField(forms.FileField):
 
 
 class MergesetFileUploadForm(forms.Form):
-    """Validate CSV and XLSX source files before storage."""
+    """Validate CSV source files before storage."""
 
     files = MultipleFileField(
         label="Source files",
         widget=MultipleFileInput(
             attrs={
-                "accept": ".csv,.xlsx",
+                "accept": ".csv",
             }
         ),
     )
@@ -47,7 +47,7 @@ class MergesetFileUploadForm(forms.Form):
             extension = Path(uploaded_file.name).suffix.lower()
             if extension not in SUPPORTED_EXTENSIONS:
                 raise forms.ValidationError(
-                    f"{uploaded_file.name}: only CSV and XLSX files are supported."
+                    f"{uploaded_file.name}: only CSV files are supported."
                 )
             if uploaded_file.size > MAX_UPLOAD_SIZE:
                 raise forms.ValidationError(

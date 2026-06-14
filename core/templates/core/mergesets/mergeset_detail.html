@@ -132,7 +132,7 @@
                     <div class="ws-card-header">
                         <p class="ws-eyebrow">Source files</p>
                         <h2 class="ws-card-title" id="upload-heading">Upload spreadsheets</h2>
-                        <p class="ws-card-sub">CSV or XLSX files &middot; up to 10 MB each</p>
+                        <p class="ws-card-sub">CSV files &middot; up to 10 MB each</p>
                     </div>
 
                     <div class="ws-card-body">
@@ -153,7 +153,7 @@
                                 </span>
                                 <span class="ws-dropzone-text">
                                     <span>Choose files to upload</span>
-                                    <span class="ws-dropzone-sub">Supports .csv and .xlsx</span>
+                                    <span class="ws-dropzone-sub">Supports .csv</span>
                                 </span>
                                 <span class="ws-browse-btn">Browse files</span>
                             </label>
@@ -203,7 +203,15 @@
                                                 {{ source_file.original_name }}
                                             </td>
                                             <td class="mono">{{ source_file.file_size|filesizeformat }}</td>
-                                            <td class="mono muted">&mdash;</td>
+                                            <td class="mono muted">
+                                                {% if source_file.parse_status == "parsed" %}
+                                                    {{ source_file.row_count }}
+                                                {% elif source_file.parse_status == "failed" %}
+                                                    Parse failed: {{ source_file.parse_error }}
+                                                {% else %}
+                                                    Pending
+                                                {% endif %}
+                                            </td>
                                             <td class="mono muted">{{ source_file.uploaded_at|date:"M j, Y" }}</td>
                                         </tr>
                                     {% endfor %}
