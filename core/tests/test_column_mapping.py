@@ -1,4 +1,4 @@
-"""Tests for the initial column-mapping workspace."""
+"""Tests for the initial AI suggestion workspace."""
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -11,7 +11,7 @@ User = get_user_model()
 
 
 class ColumnMappingViewTests(TestCase):
-    """Verify mapping readiness, ownership, and parsed-header rendering."""
+    """Verify suggestion readiness, ownership, and parsed-header rendering."""
 
     def setUp(self) -> None:
         """Create users and an owner-scoped mergeset."""
@@ -118,8 +118,8 @@ class ColumnMappingViewTests(TestCase):
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk}),
         )
 
-    def test_mapping_page_lists_parsed_headers_and_ai_panel(self) -> None:
-        """Ready files should render their headers beside the assistant."""
+    def test_mapping_page_lists_parsed_headers_and_ai_suggestions(self) -> None:
+        """Ready files should render headers beside the AI suggestion plan."""
 
         self.create_source_file()
         self.client.force_login(self.owner)
@@ -130,8 +130,13 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "Transaction Date")
         self.assertContains(response, "Description")
         self.assertContains(response, "Amount")
-        self.assertContains(response, "Mapping assistant")
-        self.assertContains(response, "Suggest mapping")
+        self.assertContains(response, "AI suggestion assistant")
+        self.assertContains(response, "AI merge strategy")
+        self.assertContains(response, "Generate AI suggestion")
+        self.assertContains(response, "Run AI merge plan")
+        self.assertContains(response, "Included in suggestion scan")
+        self.assertNotContains(response, "Awaiting suggestion")
+        self.assertNotContains(response, "<select")
 
     def test_upload_page_enables_mapping_action_when_all_files_are_parsed(self) -> None:
         """The proceed action should link to mapping when parsing is complete."""

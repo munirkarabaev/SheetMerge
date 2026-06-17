@@ -1,6 +1,6 @@
 {% extends "core/base.html" %}
 
-{% block title %}Column mapping | {{ mergeset.name }} | SheetMerge{% endblock title %}
+{% block title %}AI suggestions | {{ mergeset.name }} | SheetMerge{% endblock title %}
 
 {% block page_shell %}
 <div class="ws-shell">
@@ -32,7 +32,7 @@
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="9 18 15 12 9 6"/>
                 </svg>
-                <span class="ws-breadcrumb-active">Column mapping</span>
+                <span class="ws-breadcrumb-active">AI suggestions</span>
             </nav>
         </div>
 
@@ -95,7 +95,7 @@
                         </div>
                         <div class="ws-step-body">
                             <p class="ws-step-label">Mapping</p>
-                            <p class="ws-step-title">Column mapping</p>
+                            <p class="ws-step-title">AI suggestions</p>
                         </div>
                     </div>
 
@@ -115,20 +115,52 @@
         <main class="ws-main">
             <div class="ws-content ws-content--mapping">
                 <header class="ws-page-header">
-                    <span class="ws-badge">Column mapping</span>
-                    <h1 class="ws-page-title">Tell SheetMerge how to organize your data</h1>
+                    <span class="ws-badge">AI suggestions</span>
+                    <h1 class="ws-page-title">Let AI decide how to merge your files</h1>
                     <p class="ws-page-meta">
-                        Review detected headers, then describe the output you want in the assistant.
+                        SheetMerge will scan detected headers and sample rows, then prepare a structured merge plan for Python to run.
                     </p>
                 </header>
 
                 <div class="mapping-layout">
                     <div class="mapping-files">
+                        <section class="ws-card" aria-labelledby="ai-plan-heading">
+                            <div class="ws-card-header">
+                                <p class="ws-eyebrow">Suggested plan</p>
+                                <h2 class="ws-card-title" id="ai-plan-heading">AI merge strategy</h2>
+                                <p class="ws-card-sub">Generated from uploaded file structure and your instructions.</p>
+                            </div>
+
+                            <div class="ai-suggestion-plan">
+                                <div class="ai-suggestion-item">
+                                    <span class="mapping-status">Planned</span>
+                                    <div>
+                                        <h3>Identify transaction fields automatically</h3>
+                                        <p>Detect date, description, amount, debit, credit, balance, and reference columns across every source file.</p>
+                                    </div>
+                                </div>
+                                <div class="ai-suggestion-item">
+                                    <span class="mapping-status">Planned</span>
+                                    <div>
+                                        <h3>Normalize values with Python</h3>
+                                        <p>Convert dates and numeric amounts into one consistent format before rows are merged.</p>
+                                    </div>
+                                </div>
+                                <div class="ai-suggestion-item">
+                                    <span class="mapping-status">Planned</span>
+                                    <div>
+                                        <h3>Ask only when the data is ambiguous</h3>
+                                        <p>Use the assistant for clarification instead of showing manual mapping controls for every column.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
                         {% for source_file in mergeset.source_files.all %}
                             <section class="ws-card" aria-labelledby="file-{{ source_file.pk }}-heading">
                                 <div class="ws-card-header ws-card-header--row">
                                     <div>
-                                        <p class="ws-eyebrow">Parsed source</p>
+                                        <p class="ws-eyebrow">Scanned source</p>
                                         <h2 class="ws-card-title" id="file-{{ source_file.pk }}-heading">
                                             {{ source_file.original_name }}
                                         </h2>
@@ -137,33 +169,21 @@
                                             &middot; {{ source_file.headers|length }} columns
                                         </p>
                                     </div>
-                                    <span class="mapping-status">Ready</span>
+                                    <span class="mapping-status">Ready for AI</span>
                                 </div>
 
                                 <div class="mapping-columns">
                                     <div class="mapping-columns-heading">
-                                        <span>Source column</span>
-                                        <span>Map to</span>
+                                        <span>Detected source columns</span>
+                                        <span>AI use</span>
                                     </div>
                                     {% for header in source_file.headers %}
                                         <div class="mapping-row">
                                             <div>
                                                 <span class="mapping-source-name">{{ header }}</span>
-                                                <span class="mapping-source-meta">Detected header</span>
+                                                <span class="mapping-source-meta">Available for AI analysis</span>
                                             </div>
-                                            <label>
-                                                <span class="ws-visually-hidden">Map {{ header }}</span>
-                                                <select class="mapping-select" disabled>
-                                                    <option selected>Awaiting suggestion</option>
-                                                    <option>Date</option>
-                                                    <option>Description</option>
-                                                    <option>Amount</option>
-                                                    <option>Debit</option>
-                                                    <option>Credit</option>
-                                                    <option>Reference</option>
-                                                    <option>Ignore</option>
-                                                </select>
-                                            </label>
+                                            <span class="mapping-ai-use">Included in suggestion scan</span>
                                         </div>
                                     {% endfor %}
                                 </div>
@@ -175,8 +195,8 @@
                         <div class="ai-panel-header">
                             <span class="ai-avatar" aria-hidden="true">AI</span>
                             <div>
-                                <h2 id="assistant-heading">Mapping assistant</h2>
-                                <p>Describe the spreadsheet you want.</p>
+                                <h2 id="assistant-heading">AI suggestion assistant</h2>
+                                <p>Tell the AI what the final spreadsheet should look like.</p>
                             </div>
                             <span class="ai-status">Design preview</span>
                         </div>
@@ -184,14 +204,14 @@
                         <div class="ai-conversation">
                             <div class="ai-message">
                                 <p>
-                                    I can review the detected headers across your files and suggest
-                                    a consistent output structure.
+                                    I will inspect the uploaded files, choose the likely transaction columns,
+                                    and return a merge plan that Python can validate and execute.
                                 </p>
                             </div>
                             <div class="ai-prompt-examples">
                                 <p>Try asking:</p>
                                 <button type="button" disabled>
-                                    Combine transaction dates, descriptions, and amounts
+                                    Merge all transactions into Date, Description, and Amount
                                 </button>
                                 <button type="button" disabled>
                                     Treat debit values as negative amounts
@@ -206,12 +226,12 @@
                             <label for="mapping-instructions">Your instructions</label>
                             <textarea
                                 id="mapping-instructions"
-                                placeholder="Example: Create Date, Description, and Amount columns. Combine debit and credit into Amount."
+                                placeholder="Example: Merge these into Date, Description, Amount, and Source. Combine debit and credit into one signed amount."
                                 disabled
                             ></textarea>
                             <div class="ai-composer-footer">
-                                <span>AI connection and mapping suggestions come next.</span>
-                                <button type="button" class="ws-btn-primary" disabled>Suggest mapping</button>
+                                <span>AI execution will generate a validated plan before Python processes the sheets.</span>
+                                <button type="button" class="ws-btn-primary" disabled>Generate AI suggestion</button>
                             </div>
                         </div>
                     </aside>
@@ -221,7 +241,7 @@
                     <a class="ws-btn-secondary" href="{% url 'core:mergeset_detail' mergeset.pk %}">
                         Back to uploads
                     </a>
-                    <span class="ws-btn-disabled" aria-disabled="true">Confirm mapping</span>
+                    <span class="ws-btn-disabled" aria-disabled="true">Run AI merge plan</span>
                 </div>
             </div>
         </main>
