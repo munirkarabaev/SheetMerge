@@ -61,7 +61,42 @@ class MergesetDetailView(OwnedMergesetQuerysetMixin, DetailView):
 
         context = super().get_context_data(**kwargs)
         context["upload_form"] = MergesetFileUploadForm()
+        source_files = context["mergeset"].source_files.all()
+        context["mapping_ready"] = (
+            source_files.exists()
+            and not source_files.exclude(
+                parse_status=MergesetFile.ParseStatus.PARSED
+            ).exists()
+        )
         return context
+
+
+class MergesetMappingView(OwnedMergesetQuerysetMixin, DetailView):
+    """Render parsed source headers for column mapping."""
+
+    model = Mergeset
+    template_name = "core/mergesets/mergeset_mapping.html"
+    context_object_name = "mergeset"
+
+    def get(self, request, *args, **kwargs):
+        """Require at least one successfully parsed file before mapping."""
+
+        self.object = self.get_object()
+        source_files = self.object.source_files.all()
+        mapping_ready = (
+            source_files.exists()
+            and not source_files.exclude(
+                parse_status=MergesetFile.ParseStatus.PARSED
+            ).exists()
+        )
+        if not mapping_ready:
+            messages.error(
+                request,
+                "Upload files and resolve all parsing errors before column mapping.",
+            )
+            return redirect("core:mergeset_detail", pk=self.object.pk)
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
 
 
 class MergesetDeleteView(LoginRequiredMixin, View):

@@ -180,6 +180,19 @@ class MergesetFileUploadTests(TestCase):
         self.assertContains(response, "bank-january.csv")
         self.assertContains(response, "Uploaded")
 
+    def test_upload_control_supports_a_persistent_multiple_file_queue(self) -> None:
+        """The workspace should render multiple selection and queue behavior."""
+
+        self.client.force_login(self.owner)
+
+        response = self.client.get(
+            reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
+        )
+
+        self.assertContains(response, "multiple")
+        self.assertContains(response, "data-file-queue")
+        self.assertContains(response, "core/js/file_upload.js")
+
     def test_upload_parses_headers_and_row_count(self) -> None:
         """Successful parsing should store metadata for column mapping."""
 

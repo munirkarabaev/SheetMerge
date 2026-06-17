@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Mergeset
+from core.models import Mergeset, MergesetFile
 
 
 User = get_user_model()
@@ -24,6 +24,16 @@ class PrimaryNavigationTests(TestCase):
             owner=self.user,
             name="Navigation test",
             description="",
+        )
+        MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file="mergesets/test/sources/navigation.csv",
+            original_name="navigation.csv",
+            file_size=100,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["date", "amount"],
+            delimiter=",",
+            row_count=1,
         )
 
     def assert_active_link(self, response, label: str) -> None:
@@ -67,6 +77,7 @@ class PrimaryNavigationTests(TestCase):
             reverse("core:mergeset_list"),
             reverse("core:mergeset_create"),
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk}),
+            reverse("core:mergeset_mapping", kwargs={"pk": self.mergeset.pk}),
         ]
 
         for url in urls:

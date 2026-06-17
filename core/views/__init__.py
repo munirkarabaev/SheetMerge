@@ -8,6 +8,7 @@ from core.views.mergesets import (
     MergesetFileDeleteView,
     MergesetFileUploadView,
     MergesetListView,
+    MergesetMappingView,
 )
 from core.views.pages import BillingPageView, SupportPageView
 
@@ -20,5 +21,6 @@ __all__ = [
     "MergesetFileDeleteView",
     "MergesetFileUploadView",
     "MergesetListView",
+    "MergesetMappingView",
     "SupportPageView",
 ]

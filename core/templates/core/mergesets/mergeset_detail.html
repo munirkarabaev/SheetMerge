@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}{{ mergeset.name }} | SheetMerge{% endblock title %}
 
@@ -168,6 +169,15 @@
                                 <span class="ws-browse-btn">Browse files</span>
                             </label>
                             {{ upload_form.files }}
+                            <div class="ws-file-queue" data-file-queue hidden>
+                                <div class="ws-file-queue-header">
+                                    <span>Selected files</span>
+                                    <button type="button" class="ws-link-danger" data-clear-files>
+                                        Clear all
+                                    </button>
+                                </div>
+                                <ul class="ws-file-queue-list" data-file-list></ul>
+                            </div>
                             {% if upload_form.files.errors %}
                                 <p class="ws-field-error">{{ upload_form.files.errors|striptags }}</p>
                             {% endif %}
@@ -243,8 +253,35 @@
                 {% else %}
                     <p class="ws-empty">No source files uploaded yet.</p>
                 {% endif %}
+
+                <div class="ws-workflow-footer">
+                    <div>
+                        <p class="ws-eyebrow">Next step</p>
+                        <p class="ws-workflow-footer-title">Map your source columns</p>
+                        <p class="ws-card-sub">
+                            {% if mapping_ready %}
+                                All uploaded files are parsed and ready.
+                            {% else %}
+                                Upload at least one CSV and resolve parsing errors to continue.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if mapping_ready %}
+                        <a
+                            class="ws-btn-primary"
+                            href="{% url 'core:mergeset_mapping' mergeset.pk %}"
+                        >
+                            Proceed to column mapping
+                        </a>
+                    {% else %}
+                        <span class="ws-btn-disabled" aria-disabled="true">
+                            Proceed to column mapping
+                        </span>
+                    {% endif %}
+                </div>
             </div>
         </main>
     </div>
 </div>
+<script src="{% static 'core/js/file_upload.js' %}"></script>
 {% endblock page_shell %}

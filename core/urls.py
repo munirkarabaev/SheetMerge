@@ -11,6 +11,7 @@ from core.views import (
     MergesetFileDeleteView,
     MergesetFileUploadView,
     MergesetListView,
+    MergesetMappingView,
     SupportPageView,
 )
 
@@ -25,6 +26,11 @@ urlpatterns = [
         "mergesets/<int:pk>/delete/",
         MergesetDeleteView.as_view(),
         name="mergeset_delete",
+    ),
+    path(
+        "mergesets/<int:pk>/mapping/",
+        MergesetMappingView.as_view(),
+        name="mergeset_mapping",
     ),
     path(
         "mergesets/<int:pk>/files/",
