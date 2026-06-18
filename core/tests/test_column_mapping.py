@@ -2,6 +2,7 @@
 
 import shutil
 import tempfile
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -172,8 +173,44 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "debit_credit_to_signed_amount")
         self.assertContains(response, "Balance")
         self.assertContains(response, "Spreadsheet result")
+        self.assertContains(response, "Show preview")
+        self.assertContains(response, "data-preview-table hidden")
+        self.assertContains(response, "core/js/column_mapping.js")
+        self.assertContains(response, "Ask AI to edit the result")
+        self.assertContains(response, "Ask AI to revise")
         self.assertContains(response, "-4.50")
         self.assertContains(response, "Back to AI chat")
+
+    def test_column_mapping_post_requests_ai_revision(self) -> None:
+        """Submitting a revision should call the AI revision service."""
+
+        merge_plan = self.create_merge_plan()
+        self.client.force_login(self.owner)
+
+        with patch("core.views.mergesets.run_merge_plan_revision") as mock_revision:
+            response = self.client.post(
+                self.mapping_url,
+                {"instruction": "Sort it in chronological order."},
+            )
+
+        self.assertRedirects(response, self.mapping_url)
+        mock_revision.assert_called_once_with(
+            merge_plan,
+            "Sort it in chronological order.",
+        )
+
+    def test_column_mapping_post_rejects_blank_revision(self) -> None:
+        """Blank revision requests should not call the AI service."""
+
+        self.create_merge_plan()
+        self.client.force_login(self.owner)
+
+        with patch("core.views.mergesets.run_merge_plan_revision") as mock_revision:
+            response = self.client.post(self.mapping_url, {"instruction": ""})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required")
+        mock_revision.assert_not_called()
 
     def test_ai_suggestions_links_to_existing_mapping_plan(self) -> None:
         """AI suggestions should link to review when a plan exists."""

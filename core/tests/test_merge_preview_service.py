@@ -142,6 +142,20 @@ class MergePreviewServiceTests(TestCase):
 
         self.assertEqual(len(preview.rows), 1)
 
+    def test_build_merge_preview_applies_sort_operation(self) -> None:
+        """Result operations should sort mapped rows after merging."""
+
+        plan = self.create_merge_plan()
+        plan.plan_json["result_operations"] = [
+            {"type": "sort", "column": "Date", "direction": "descending"}
+        ]
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(preview.rows[0]["Date"], "2026-01-02")
+        self.assertEqual(preview.rows[1]["Date"], "2026-01-01")
+
     def test_build_merge_preview_defaults_to_all_rows(self) -> None:
         """Default preview generation should not truncate spreadsheet rows."""
 
@@ -181,3 +195,27 @@ class MergePreviewServiceTests(TestCase):
         preview = build_merge_preview(plan)
 
         self.assertEqual(preview.rows, [])
+
+    def test_build_merge_preview_reads_legacy_encoded_csv(self) -> None:
+        """Preview generation should reuse tolerant CSV decoding."""
+
+        source_file = MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file=SimpleUploadedFile(
+                "legacy.csv",
+                b"Transaction Date,Description,Debit,Credit\n2026-03-01,Caf\xe9,5,\n",
+            ),
+            original_name="legacy.csv",
+            file_size=64,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["Transaction Date", "Description", "Debit", "Credit"],
+            delimiter=",",
+            row_count=1,
+        )
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["file_id"] = source_file.id
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(preview.rows[0]["Description"], "Café")

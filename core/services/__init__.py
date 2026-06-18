@@ -10,15 +10,18 @@ from core.services.ai_planning import (
 )
 from core.services.csv_parser import parse_mergeset_file
 from core.services.merge_preview import MergePreview, build_merge_preview
+from core.services.ai_revision import PlanRevisionResult, run_merge_plan_revision
 
 __all__ = [
     "OpenAIPlanningError",
     "PlanningContext",
     "PlanningTurnResult",
+    "PlanRevisionResult",
     "build_merge_planning_context",
     "build_merge_preview",
     "MergePreview",
     "parse_mergeset_file",
     "request_merge_planning_response",
+    "run_merge_plan_revision",
     "run_merge_planning_turn",
 ]

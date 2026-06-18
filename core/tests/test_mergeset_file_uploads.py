@@ -311,8 +311,8 @@ class MergesetFileUploadTests(TestCase):
         self.assertEqual(source_file.delimiter, ";")
         self.assertEqual(source_file.row_count, 1)
 
-    def test_non_utf8_csv_is_stored_with_parse_error(self) -> None:
-        """Unsupported text encoding should produce a clear parse failure."""
+    def test_legacy_encoded_csv_is_parsed(self) -> None:
+        """Common legacy text encodings should be accepted."""
 
         self.client.force_login(self.owner)
 
@@ -329,8 +329,8 @@ class MergesetFileUploadTests(TestCase):
         )
 
         source_file = MergesetFile.objects.get()
-        self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.FAILED)
-        self.assertEqual(
-            source_file.parse_error,
-            "The CSV file must use UTF-8 encoding.",
-        )
+        self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.PARSED)
+        self.assertEqual(source_file.headers, ["description", "amount"])
+        self.assertEqual(source_file.sample_rows, [["Café", "10"]])
+        self.assertEqual(source_file.row_count, 1)
+        self.assertEqual(source_file.parse_error, "")

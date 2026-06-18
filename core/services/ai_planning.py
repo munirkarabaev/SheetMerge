@@ -180,6 +180,8 @@ def _validate_response_payload(payload: dict[str, Any]) -> None:
         raise OpenAIPlanningError("OpenAI response final columns must be a list.")
     if not isinstance(payload.get("file_mappings"), list):
         raise OpenAIPlanningError("OpenAI response file mappings must be a list.")
+    if not isinstance(payload.get("result_operations", []), list):
+        raise OpenAIPlanningError("OpenAI response result operations must be a list.")
 
 
 def _build_openai_response_schema() -> dict[str, Any]:
@@ -194,6 +196,7 @@ def _build_openai_response_schema() -> dict[str, Any]:
             "questions",
             "final_columns",
             "file_mappings",
+            "result_operations",
         ],
         "properties": {
             "status": {
@@ -246,6 +249,22 @@ def _build_openai_response_schema() -> dict[str, Any]:
                             },
                         },
                         "ignored_columns": {"type": "array", "items": {"type": "string"}},
+                    },
+                },
+            },
+            "result_operations": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["type", "column", "direction"],
+                    "properties": {
+                        "type": {"type": "string", "enum": ["sort"]},
+                        "column": {"type": "string"},
+                        "direction": {
+                            "type": "string",
+                            "enum": ["ascending", "descending"],
+                        },
                     },
                 },
             },
@@ -321,6 +340,7 @@ def _build_response_contract() -> dict[str, Any]:
             "Preserve every final column requested by the user; do not silently drop requested columns.",
             "If the user asks to keep all columns, include all uploaded source headers as final columns unless they explicitly exclude some.",
             "Do not default to a Date, Description, Amount transaction layout unless the user requested that simplified layout.",
+            "Use result_operations for whole-spreadsheet edits such as sorting rows after mapping.",
         ],
         "needs_clarification": {
             "required_fields": ["status", "assistant_message", "questions"],
@@ -331,6 +351,7 @@ def _build_response_contract() -> dict[str, Any]:
                 "assistant_message",
                 "final_columns",
                 "file_mappings",
+                "result_operations",
             ],
         },
         "supported_transforms": [

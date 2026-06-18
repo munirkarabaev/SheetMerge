@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from io import StringIO
 
 from core.models import MergePlan, MergesetFile
+from core.services.csv_parser import decode_csv_content
 
 
 @dataclass(frozen=True)
@@ -38,9 +39,10 @@ def build_merge_preview(merge_plan: MergePlan, limit: int | None = None) -> Merg
 
         for source_row in _read_source_rows(source_file):
             rows.append(_build_preview_row(final_columns, file_mapping, source_row, source_file))
-            if limit is not None and len(rows) >= limit:
-                return MergePreview(columns=final_columns, rows=rows)
 
+    rows = _apply_result_operations(rows, merge_plan.plan_json.get("result_operations", []))
+    if limit is not None:
+        rows = rows[:limit]
     return MergePreview(columns=final_columns, rows=rows)
 
 
@@ -53,7 +55,7 @@ def _read_source_rows(source_file: MergesetFile) -> list[dict[str, str]]:
     finally:
         source_file.file.close()
 
-    content = raw_content.decode("utf-8-sig")
+    content = decode_csv_content(raw_content)
     reader = csv.DictReader(
         StringIO(content, newline=""),
         fieldnames=source_file.headers,
@@ -124,3 +126,20 @@ def _clean_amount(value: str) -> str:
     """Normalize common currency formatting without changing precision."""
 
     return value.strip().replace(",", "").replace("£", "").replace("$", "")
+
+
+def _apply_result_operations(
+    rows: list[dict[str, str]],
+    operations: list[dict],
+) -> list[dict[str, str]]:
+    """Apply whole-result operations such as sorting."""
+
+    for operation in operations:
+        if operation.get("type") != "sort":
+            continue
+        column = operation.get("column")
+        if not column:
+            continue
+        reverse = operation.get("direction") == "descending"
+        rows = sorted(rows, key=lambda row: row.get(column, ""), reverse=reverse)
+    return rows

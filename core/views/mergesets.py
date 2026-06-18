@@ -10,7 +10,12 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView
 
-from core.forms import MergePlanningMessageForm, MergesetFileUploadForm, MergesetForm
+from core.forms import (
+    MergePlanRevisionForm,
+    MergePlanningMessageForm,
+    MergesetFileUploadForm,
+    MergesetForm,
+)
 from core.models import (
     MergePlan,
     MergePlanningMessage,
@@ -22,6 +27,7 @@ from core.services import (
     OpenAIPlanningError,
     build_merge_preview,
     parse_mergeset_file,
+    run_merge_plan_revision,
     run_merge_planning_turn,
 )
 
@@ -210,6 +216,7 @@ class MergesetColumnMappingView(OwnedMergesetQuerysetMixin, DetailView):
     model = Mergeset
     template_name = "core/mergesets/mergeset_column_mapping.html"
     context_object_name = "mergeset"
+    http_method_names = ["get", "post"]
 
     def get(self, request, *args, **kwargs):
         """Require a generated merge plan before rendering mapping review."""
@@ -231,7 +238,27 @@ class MergesetColumnMappingView(OwnedMergesetQuerysetMixin, DetailView):
         context["final_columns"] = plan_json.get("final_columns", [])
         context["file_mappings"] = plan_json.get("file_mappings", [])
         context["merge_preview"] = build_merge_preview(self.merge_plan)
+        context["revision_form"] = kwargs.get("revision_form", MergePlanRevisionForm())
         return context
+
+    def post(self, request, *args, **kwargs):
+        """Revise the current merge plan from a review-page instruction."""
+
+        self.object = self.get_object()
+        self.merge_plan = self.object.merge_plans.first()
+        if self.merge_plan is None:
+            return redirect("core:mergeset_ai_suggestions", pk=self.object.pk)
+
+        form = MergePlanRevisionForm(request.POST)
+        if not form.is_valid():
+            context = self.get_context_data(object=self.object, revision_form=form)
+            return self.render_to_response(context)
+
+        try:
+            run_merge_plan_revision(self.merge_plan, form.cleaned_data["instruction"])
+        except OpenAIPlanningError as error:
+            messages.error(request, str(error))
+        return redirect("core:mergeset_column_mapping", pk=self.object.pk)
 
 
 class MergesetDeleteView(LoginRequiredMixin, View):

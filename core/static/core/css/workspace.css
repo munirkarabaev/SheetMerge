@@ -158,6 +158,12 @@
 .mapping-ignored { display: grid; gap: 4px; padding: 12px 20px; border-top: 1px solid #f3f4f6; background: #fafafa; }
 .mapping-ignored span { color: #9ca3af; font-family: "JetBrains Mono", monospace; font-size: 10px; text-transform: uppercase; }
 .mapping-ignored p { color: #6b7280; font-size: 12px; }
+.preview-toggle { padding: 5px 9px; border: 1px solid #107c41; border-radius: 6px; background: #ffffff; color: #107c41; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.preview-toggle:hover { background: #f0f7f3; }
+.preview-table { max-height: 420px; overflow: auto; }
+.mapping-revision-form { display: grid; gap: 10px; }
+.mapping-revision-form label { color: #374151; font-size: 13px; font-weight: 600; }
+.mapping-revision-form textarea { min-height: 96px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fafafa; color: #374151; font: inherit; font-size: 14px; line-height: 1.5; resize: vertical; }
 .ws-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (max-width: 760px) { .ws-breadcrumb,
     .ws-nav-right { display: none; }

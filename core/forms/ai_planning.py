@@ -20,3 +20,19 @@ class MergePlanningMessageForm(forms.Form):
             }
         ),
     )
+
+
+class MergePlanRevisionForm(forms.Form):
+    """Validate one requested edit to an AI-generated merge plan."""
+
+    instruction = forms.CharField(
+        label="Ask AI to revise",
+        max_length=4000,
+        widget=forms.Textarea(
+            attrs={
+                "id": "mapping-revision",
+                "placeholder": "Example: Sort the preview by Date from oldest to newest.",
+                "rows": 3,
+            }
+        ),
+    )

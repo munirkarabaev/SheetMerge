@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}Column mapping | {{ mergeset.name }} | SheetMerge{% endblock title %}
 
@@ -154,9 +155,20 @@
                         <span class="ws-count-badge">
                             {{ merge_preview.rows|length }} row{{ merge_preview.rows|length|pluralize }}
                         </span>
+                        {% if merge_preview.rows %}
+                            <button
+                                type="button"
+                                class="preview-toggle"
+                                data-preview-toggle
+                                aria-expanded="false"
+                                aria-controls="spreadsheet-preview"
+                            >
+                                Show preview
+                            </button>
+                        {% endif %}
                     </div>
                     {% if merge_preview.rows %}
-                        <div class="ws-table-wrap">
+                        <div class="ws-table-wrap preview-table" id="spreadsheet-preview" data-preview-table hidden>
                             <table class="ws-table">
                                 <thead>
                                     <tr>
@@ -181,6 +193,27 @@
                     {% endif %}
                 </section>
 
+                <section class="ws-card" aria-labelledby="revision-heading">
+                    <div class="ws-card-header">
+                        <p class="ws-eyebrow">Revise</p>
+                        <h2 class="ws-card-title" id="revision-heading">Ask AI to edit the result</h2>
+                        <p class="ws-card-sub">Use this for changes like sorting rows, renaming columns, or adjusting mappings.</p>
+                    </div>
+                    <div class="ws-card-body">
+                        <form method="post" class="mapping-revision-form">
+                            {% csrf_token %}
+                            <label for="{{ revision_form.instruction.id_for_label }}">
+                                Requested edit
+                            </label>
+                            {{ revision_form.instruction }}
+                            {% if revision_form.instruction.errors %}
+                                <p class="ws-field-error">{{ revision_form.instruction.errors|striptags }}</p>
+                            {% endif %}
+                            <button type="submit" class="ws-btn-primary">Ask AI to revise</button>
+                        </form>
+                    </div>
+                </section>
+
                 <div class="ws-workflow-footer">
                     <a class="ws-btn-secondary" href="{% url 'core:mergeset_ai_suggestions' mergeset.pk %}">
                         Back to AI chat
@@ -191,4 +224,5 @@
         </main>
     </div>
 </div>
+<script src="{% static 'core/js/column_mapping.js' %}"></script>
 {% endblock page_shell %}

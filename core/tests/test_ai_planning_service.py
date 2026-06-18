@@ -244,7 +244,7 @@ class MergePlanningContextTests(TestCase):
             (
                 '{"status":"needs_clarification","assistant_message":"Which '
                 'columns do you want?","questions":["Which columns do you want?"],'
-                '"final_columns":[],"file_mappings":[]}'
+                '"final_columns":[],"file_mappings":[],"result_operations":[]}'
             )
         )
 
@@ -268,7 +268,7 @@ class MergePlanningContextTests(TestCase):
             (
                 '{"status":"needs_clarification","assistant_message":"Should '
                 'refunds be positive?","questions":["Should refunds be positive?"],'
-                '"final_columns":[],"file_mappings":[]}'
+                '"final_columns":[],"file_mappings":[],"result_operations":[]}'
             )
         )
 
@@ -296,7 +296,7 @@ class MergePlanningContextTests(TestCase):
                 '"type":"date"}],"file_mappings":[{"file_id":1,"filename":'
                 '"bank.csv","mappings":[{"target_column":"Date","source_columns":'
                 '["Transaction Date"],"transform":"parse_date","notes":""}],'
-                '"ignored_columns":["Balance"]}]}'
+                '"ignored_columns":["Balance"]}],"result_operations":[]}'
             )
         )
 

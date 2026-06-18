@@ -11,6 +11,7 @@ from core.models import MergesetFile
 
 SNIFFED_DELIMITERS = ",;\t|"
 MAX_SAMPLE_ROWS = 10
+SUPPORTED_ENCODINGS = ("utf-8-sig", "cp1252", "iso-8859-1")
 
 
 class CsvParseError(ValueError):
@@ -36,10 +37,7 @@ def read_csv_metadata(source_file: MergesetFile) -> CsvParseResult:
     finally:
         source_file.file.close()
 
-    try:
-        content = raw_content.decode("utf-8-sig")
-    except UnicodeDecodeError as error:
-        raise CsvParseError("The CSV file must use UTF-8 encoding.") from error
+    content = decode_csv_content(raw_content)
 
     if not content.strip():
         raise CsvParseError("The CSV file is empty.")
@@ -118,6 +116,17 @@ def parse_mergeset_file(source_file: MergesetFile) -> bool:
         ]
     )
     return parsed
+
+
+def decode_csv_content(raw_content: bytes) -> str:
+    """Decode CSV bytes using common modern and legacy encodings."""
+
+    for encoding in SUPPORTED_ENCODINGS:
+        try:
+            return raw_content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise CsvParseError("The CSV file uses an unsupported text encoding.")
 
 
 def _validate_headers(headers: list[str]) -> None:
