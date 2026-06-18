@@ -130,41 +130,50 @@
                                 <h2 id="assistant-heading">AI suggestion assistant</h2>
                                 <p>Tell the AI what the final spreadsheet should look like.</p>
                             </div>
-                            <span class="ai-status">Design preview</span>
+                            <span class="ai-status">{{ planning_session.get_status_display }}</span>
                         </div>
 
                         <div class="ai-conversation">
-                            <div class="ai-message">
-                                <p>
-                                    I will inspect the uploaded files, choose the likely transaction columns,
-                                    and return a merge plan that Python can validate and execute.
-                                </p>
-                            </div>
-                            <div class="ai-prompt-examples">
-                                <p>Try asking:</p>
-                                <button type="button" disabled>
-                                    Merge all transactions into Date, Description, and Amount
-                                </button>
-                                <button type="button" disabled>
-                                    Treat debit values as negative amounts
-                                </button>
-                                <button type="button" disabled>
-                                    Ignore balance and account-number columns
-                                </button>
-                            </div>
+                            {% if planning_messages %}
+                                {% for message in planning_messages %}
+                                    <div class="ai-message ai-message--{{ message.role }}">
+                                        <p>{{ message.content }}</p>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="ai-message ai-message--assistant">
+                                    <p>
+                                        I will inspect the uploaded files, ask any important follow-up questions,
+                                        and prepare a merge plan that Python can validate and execute.
+                                    </p>
+                                </div>
+                                <div class="ai-prompt-examples">
+                                    <p>Try asking:</p>
+                                    <button type="button" disabled>
+                                        Merge all transactions into Date, Description, and Amount
+                                    </button>
+                                    <button type="button" disabled>
+                                        Treat debit values as negative amounts
+                                    </button>
+                                    <button type="button" disabled>
+                                        Ignore balance and account-number columns
+                                    </button>
+                                </div>
+                            {% endif %}
                         </div>
 
-                        <div class="ai-composer">
-                            <label for="ai-instructions">Your instructions</label>
-                            <textarea
-                                id="ai-instructions"
-                                placeholder="Example: Merge these into Date, Description, Amount, and Source. Combine debit and credit into one signed amount."
-                            ></textarea>
+                        <form method="post" class="ai-composer">
+                            {% csrf_token %}
+                            <label for="{{ message_form.content.id_for_label }}">Your instructions</label>
+                            {{ message_form.content }}
+                            {% if message_form.content.errors %}
+                                <p class="ws-field-error">{{ message_form.content.errors|striptags }}</p>
+                            {% endif %}
                             <div class="ai-composer-footer">
-                                <span>AI execution will generate a validated plan before Python processes the sheets.</span>
-                                <button type="button" class="ws-btn-primary" disabled>Generate AI suggestion</button>
+                                <span>AI planning will use parsed headers and sample rows before Python processes the sheets.</span>
+                                <button type="submit" class="ws-btn-primary">Send message</button>
                             </div>
-                        </div>
+                        </form>
                     </aside>
                 </div>
 

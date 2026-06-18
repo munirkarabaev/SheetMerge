@@ -4,7 +4,12 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Mergeset, MergesetFile
+from core.models import (
+    MergePlanningMessage,
+    MergePlanningSession,
+    Mergeset,
+    MergesetFile,
+)
 
 
 User = get_user_model()
@@ -132,7 +137,7 @@ class AISuggestionsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "AI suggestion assistant")
-        self.assertContains(response, "Generate AI suggestion")
+        self.assertContains(response, "Send message")
         self.assertContains(response, "Run AI merge plan")
         self.assertContains(response, "Your instructions")
         content = response.content.decode()
@@ -160,3 +165,96 @@ class AISuggestionsViewTests(TestCase):
         self.assertNotContains(response, "Proceed to column mapping")
         self.assertNotContains(response, "Column mapping")
         self.assertContains(response, self.ai_suggestions_url)
+
+    def test_ai_suggestions_page_creates_planning_session(self) -> None:
+        """Opening AI suggestions should prepare a conversation session."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.ai_suggestions_url)
+
+        self.assertEqual(response.status_code, 200)
+        session = MergePlanningSession.objects.get()
+        self.assertEqual(session.mergeset, self.mergeset)
+        self.assertContains(response, "Collecting requirements")
+
+    def test_ai_suggestions_page_renders_existing_messages(self) -> None:
+        """Stored planning messages should appear in the assistant panel."""
+
+        self.create_source_file()
+        session = MergePlanningSession.objects.create(mergeset=self.mergeset)
+        MergePlanningMessage.objects.create(
+            session=session,
+            role=MergePlanningMessage.Role.USER,
+            content="Use Date, Description, and signed Amount.",
+        )
+        MergePlanningMessage.objects.create(
+            session=session,
+            role=MergePlanningMessage.Role.ASSISTANT,
+            content="Should refunds be positive or negative?",
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.ai_suggestions_url)
+
+        self.assertContains(response, "Use Date, Description, and signed Amount.")
+        self.assertContains(response, "Should refunds be positive or negative?")
+        self.assertContains(response, "ai-message--user")
+        self.assertContains(response, "ai-message--assistant")
+
+    def test_ai_suggestions_post_saves_user_message_and_placeholder_reply(self) -> None:
+        """Posting instructions should append conversation messages."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(
+            self.ai_suggestions_url,
+            {"content": "Create Date, Description, Amount, and Source columns."},
+        )
+
+        self.assertRedirects(response, self.ai_suggestions_url)
+        session = MergePlanningSession.objects.get()
+        self.assertSequenceEqual(
+            list(session.messages.values_list("role", flat=True)),
+            [
+                MergePlanningMessage.Role.USER,
+                MergePlanningMessage.Role.ASSISTANT,
+            ],
+        )
+        self.assertEqual(
+            session.messages.first().content,
+            "Create Date, Description, Amount, and Source columns.",
+        )
+        self.assertIn(
+            "parsed CSV headers and sample rows",
+            session.messages.last().content,
+        )
+
+    def test_ai_suggestions_post_rejects_blank_message(self) -> None:
+        """Blank chat submissions should not create planning messages."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        response = self.client.post(self.ai_suggestions_url, {"content": ""})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "This field is required")
+        self.assertTrue(MergePlanningSession.objects.exists())
+        self.assertFalse(MergePlanningMessage.objects.exists())
+
+    def test_ai_suggestions_post_is_limited_to_owner(self) -> None:
+        """Another user should not append messages to a private mergeset."""
+
+        self.create_source_file()
+        self.client.force_login(self.other_user)
+
+        response = self.client.post(
+            self.ai_suggestions_url,
+            {"content": "Map this file."},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(MergePlanningMessage.objects.exists())

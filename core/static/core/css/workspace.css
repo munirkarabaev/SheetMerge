@@ -134,6 +134,8 @@
 .ai-status { margin-left: auto; color: #9ca3af; font-family: "JetBrains Mono", monospace; font-size: 9px; text-transform: uppercase; }
 .ai-conversation { display: grid; flex: 1; gap: 14px; min-height: clamp(320px, 42vh, 520px); padding: 18px; background: #fafafa; }
 .ai-message { max-width: 90%; padding: 11px 13px; border: 1px solid #d1e8da; border-radius: 4px 10px 10px; background: #f0f7f3; color: #374151; font-size: 11px; line-height: 1.5; }
+.ai-message--user { justify-self: end; border-color: #d1d5db; border-radius: 10px 4px 10px 10px; background: #ffffff; }
+.ai-message--assistant { justify-self: start; }
 .ai-prompt-examples { display: grid; gap: 6px; align-content: start; }
 .ai-prompt-examples p { margin-bottom: 2px; color: #9ca3af; font-size: 10px; }
 .ai-prompt-examples button { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #ffffff; color: #6b7280; font: inherit; font-size: 10px; text-align: left; }

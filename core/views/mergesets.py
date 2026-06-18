@@ -9,8 +9,8 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView
 
-from core.forms import MergesetFileUploadForm, MergesetForm
-from core.models import Mergeset, MergesetFile
+from core.forms import MergePlanningMessageForm, MergesetFileUploadForm, MergesetForm
+from core.models import MergePlanningMessage, MergePlanningSession, Mergeset, MergesetFile
 from core.services import parse_mergeset_file
 
 
@@ -77,10 +77,13 @@ class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
     model = Mergeset
     template_name = "core/mergesets/mergeset_ai_suggestions.html"
     context_object_name = "mergeset"
+    http_method_names = ["get", "post"]
 
-    def get(self, request, *args, **kwargs):
-        """Require at least one successfully parsed file before AI suggestions."""
+    def dispatch(self, request, *args, **kwargs):
+        """Resolve the mergeset and require parsed files before planning."""
 
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
         self.object = self.get_object()
         source_files = self.object.source_files.all()
         ai_suggestions_ready = (
@@ -95,8 +98,50 @@ class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
                 "Upload files and resolve all parsing errors before AI suggestions.",
             )
             return redirect("core:mergeset_detail", pk=self.object.pk)
-        context = self.get_context_data(object=self.object)
-        return self.render_to_response(context)
+        self.planning_session = self._get_or_create_planning_session()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        """Add planning conversation state to the AI workspace."""
+
+        context = super().get_context_data(**kwargs)
+        context["planning_session"] = self.planning_session
+        context["planning_messages"] = self.planning_session.messages.all()
+        context["message_form"] = kwargs.get("message_form", MergePlanningMessageForm())
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """Save one user planning message and a placeholder assistant response."""
+
+        form = MergePlanningMessageForm(request.POST)
+        if not form.is_valid():
+            context = self.get_context_data(object=self.object, message_form=form)
+            return self.render_to_response(context)
+
+        MergePlanningMessage.objects.create(
+            session=self.planning_session,
+            role=MergePlanningMessage.Role.USER,
+            content=form.cleaned_data["content"],
+        )
+        MergePlanningMessage.objects.create(
+            session=self.planning_session,
+            role=MergePlanningMessage.Role.ASSISTANT,
+            content=(
+                "I saved those instructions. In the next step I will use them "
+                "with the parsed CSV headers and sample rows to ask follow-up "
+                "questions or draft a column mapping plan."
+            ),
+        )
+        messages.success(request, "Saved planning instructions.")
+        return redirect("core:mergeset_ai_suggestions", pk=self.object.pk)
+
+    def _get_or_create_planning_session(self) -> MergePlanningSession:
+        """Return the active planning session for this mergeset."""
+
+        session = self.object.planning_sessions.first()
+        if session is None:
+            session = MergePlanningSession.objects.create(mergeset=self.object)
+        return session
 
 
 class MergesetDeleteView(LoginRequiredMixin, View):
