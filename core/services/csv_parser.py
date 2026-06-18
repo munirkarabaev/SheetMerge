@@ -1,4 +1,4 @@
-"""Parse uploaded CSV files into metadata used by column mapping."""
+"""Parse uploaded CSV files into metadata used by AI suggestions."""
 
 import csv
 from dataclasses import dataclass

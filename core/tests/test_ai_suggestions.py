@@ -10,7 +10,7 @@ from core.models import Mergeset, MergesetFile
 User = get_user_model()
 
 
-class ColumnMappingViewTests(TestCase):
+class AISuggestionsViewTests(TestCase):
     """Verify suggestion readiness, ownership, and parsed-header rendering."""
 
     def setUp(self) -> None:
@@ -29,13 +29,13 @@ class ColumnMappingViewTests(TestCase):
             name="Monthly statements",
             description="",
         )
-        self.mapping_url = reverse(
-            "core:mergeset_mapping",
+        self.ai_suggestions_url = reverse(
+            "core:mergeset_ai_suggestions",
             kwargs={"pk": self.mergeset.pk},
         )
 
     def create_source_file(self, **overrides) -> MergesetFile:
-        """Create source-file metadata for mapping-page tests."""
+        """Create source-file metadata for AI suggestion page tests."""
 
         values = {
             "mergeset": self.mergeset,
@@ -50,40 +50,40 @@ class ColumnMappingViewTests(TestCase):
         values.update(overrides)
         return MergesetFile.objects.create(**values)
 
-    def test_mapping_requires_authentication(self) -> None:
+    def test_ai_suggestions_require_authentication(self) -> None:
         """Anonymous users should be redirected to login."""
 
-        response = self.client.get(self.mapping_url)
+        response = self.client.get(self.ai_suggestions_url)
 
         self.assertRedirects(
             response,
-            f"{reverse('account_login')}?next={self.mapping_url}",
+            f"{reverse('account_login')}?next={self.ai_suggestions_url}",
         )
 
-    def test_mapping_is_limited_to_owner(self) -> None:
+    def test_ai_suggestions_are_limited_to_owner(self) -> None:
         """Another user should not see a mergeset's parsed headers."""
 
         self.create_source_file()
         self.client.force_login(self.other_user)
 
-        response = self.client.get(self.mapping_url)
+        response = self.client.get(self.ai_suggestions_url)
 
         self.assertEqual(response.status_code, 404)
 
-    def test_mapping_redirects_when_no_files_are_ready(self) -> None:
-        """Mapping should not open before a parsed source file exists."""
+    def test_ai_suggestions_redirect_when_no_files_are_ready(self) -> None:
+        """AI suggestions should not open before a parsed source file exists."""
 
         self.client.force_login(self.owner)
 
-        response = self.client.get(self.mapping_url)
+        response = self.client.get(self.ai_suggestions_url)
 
         self.assertRedirects(
             response,
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk}),
         )
 
-    def test_upload_page_disables_mapping_action_without_parsed_files(self) -> None:
-        """The upload step should explain why mapping is unavailable."""
+    def test_upload_page_disables_ai_suggestions_without_parsed_files(self) -> None:
+        """The upload step should explain why AI suggestions are unavailable."""
 
         self.client.force_login(self.owner)
 
@@ -96,10 +96,14 @@ class ColumnMappingViewTests(TestCase):
             response,
             "Upload at least one CSV and resolve parsing errors to continue.",
         )
-        self.assertNotContains(response, f'href="{self.mapping_url}"')
+        self.assertContains(response, "Proceed to AI suggestions")
+        self.assertContains(response, "AI suggestions")
+        self.assertNotContains(response, "Proceed to column mapping")
+        self.assertNotContains(response, "Column mapping")
+        self.assertNotContains(response, f'href="{self.ai_suggestions_url}"')
 
-    def test_mapping_redirects_when_any_file_failed_parsing(self) -> None:
-        """All uploaded files must parse successfully before mapping."""
+    def test_ai_suggestions_redirect_when_any_file_failed_parsing(self) -> None:
+        """All uploaded files must parse successfully before AI suggestions."""
 
         self.create_source_file()
         self.create_source_file(
@@ -111,35 +115,39 @@ class ColumnMappingViewTests(TestCase):
         )
         self.client.force_login(self.owner)
 
-        response = self.client.get(self.mapping_url)
+        response = self.client.get(self.ai_suggestions_url)
 
         self.assertRedirects(
             response,
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk}),
         )
 
-    def test_mapping_page_lists_parsed_headers_and_ai_suggestions(self) -> None:
-        """Ready files should render headers beside the AI suggestion plan."""
+    def test_ai_suggestions_page_renders_instructions_without_source_listing(self) -> None:
+        """Ready files should render the AI assistant without source listings."""
 
         self.create_source_file()
         self.client.force_login(self.owner)
 
-        response = self.client.get(self.mapping_url)
+        response = self.client.get(self.ai_suggestions_url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Transaction Date")
-        self.assertContains(response, "Description")
-        self.assertContains(response, "Amount")
         self.assertContains(response, "AI suggestion assistant")
-        self.assertContains(response, "AI merge strategy")
         self.assertContains(response, "Generate AI suggestion")
         self.assertContains(response, "Run AI merge plan")
-        self.assertContains(response, "Included in suggestion scan")
+        self.assertContains(response, "Your instructions")
+        content = response.content.decode()
+        textarea_start = content.index('id="ai-instructions"')
+        textarea_end = content.index("</textarea>", textarea_start)
+        self.assertNotIn("disabled", content[textarea_start:textarea_end])
+        self.assertNotContains(response, "bank.csv")
+        self.assertNotContains(response, "Transaction Date")
+        self.assertNotContains(response, "Scanned source")
+        self.assertNotContains(response, "Detected source columns")
         self.assertNotContains(response, "Awaiting suggestion")
         self.assertNotContains(response, "<select")
 
-    def test_upload_page_enables_mapping_action_when_all_files_are_parsed(self) -> None:
-        """The proceed action should link to mapping when parsing is complete."""
+    def test_upload_page_enables_ai_suggestions_when_all_files_are_parsed(self) -> None:
+        """The proceed action should link to AI suggestions when parsing is complete."""
 
         self.create_source_file()
         self.client.force_login(self.owner)
@@ -148,5 +156,7 @@ class ColumnMappingViewTests(TestCase):
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
         )
 
-        self.assertContains(response, "Proceed to column mapping")
-        self.assertContains(response, self.mapping_url)
+        self.assertContains(response, "Proceed to AI suggestions")
+        self.assertNotContains(response, "Proceed to column mapping")
+        self.assertNotContains(response, "Column mapping")
+        self.assertContains(response, self.ai_suggestions_url)

@@ -5,13 +5,13 @@ from django.urls import path
 from core.views import (
     BillingPageView,
     HomePageView,
+    MergesetAISuggestionsView,
     MergesetCreateView,
     MergesetDeleteView,
     MergesetDetailView,
     MergesetFileDeleteView,
     MergesetFileUploadView,
     MergesetListView,
-    MergesetMappingView,
     SupportPageView,
 )
 
@@ -28,9 +28,9 @@ urlpatterns = [
         name="mergeset_delete",
     ),
     path(
-        "mergesets/<int:pk>/mapping/",
-        MergesetMappingView.as_view(),
-        name="mergeset_mapping",
+        "mergesets/<int:pk>/ai-suggestions/",
+        MergesetAISuggestionsView.as_view(),
+        name="mergeset_ai_suggestions",
     ),
     path(
         "mergesets/<int:pk>/files/",

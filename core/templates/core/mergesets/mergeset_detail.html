@@ -93,8 +93,8 @@
                             <div class="ws-step-line"></div>
                         </div>
                         <div class="ws-step-body">
-                            <p class="ws-step-label">Mapping</p>
-                            <p class="ws-step-title ws-step-title--muted">Column mapping</p>
+                            <p class="ws-step-label">AI</p>
+                            <p class="ws-step-title ws-step-title--muted">AI suggestions</p>
                         </div>
                     </div>
 
@@ -257,25 +257,25 @@
                 <div class="ws-workflow-footer">
                     <div>
                         <p class="ws-eyebrow">Next step</p>
-                        <p class="ws-workflow-footer-title">Map your source columns</p>
+                        <p class="ws-workflow-footer-title">Get AI suggestions</p>
                         <p class="ws-card-sub">
-                            {% if mapping_ready %}
-                                All uploaded files are parsed and ready.
+                            {% if ai_suggestions_ready %}
+                                All uploaded files are parsed and ready for AI suggestions.
                             {% else %}
                                 Upload at least one CSV and resolve parsing errors to continue.
                             {% endif %}
                         </p>
                     </div>
-                    {% if mapping_ready %}
+                    {% if ai_suggestions_ready %}
                         <a
                             class="ws-btn-primary"
-                            href="{% url 'core:mergeset_mapping' mergeset.pk %}"
+                            href="{% url 'core:mergeset_ai_suggestions' mergeset.pk %}"
                         >
-                            Proceed to column mapping
+                            Proceed to AI suggestions
                         </a>
                     {% else %}
                         <span class="ws-btn-disabled" aria-disabled="true">
-                            Proceed to column mapping
+                            Proceed to AI suggestions
                         </span>
                     {% endif %}
                 </div>

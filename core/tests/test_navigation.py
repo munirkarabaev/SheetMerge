@@ -77,7 +77,7 @@ class PrimaryNavigationTests(TestCase):
             reverse("core:mergeset_list"),
             reverse("core:mergeset_create"),
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk}),
-            reverse("core:mergeset_mapping", kwargs={"pk": self.mergeset.pk}),
+            reverse("core:mergeset_ai_suggestions", kwargs={"pk": self.mergeset.pk}),
         ]
 
         for url in urls:

@@ -194,7 +194,7 @@ class MergesetFileUploadTests(TestCase):
         self.assertContains(response, "core/js/file_upload.js")
 
     def test_upload_parses_headers_and_row_count(self) -> None:
-        """Successful parsing should store metadata for column mapping."""
+        """Successful parsing should store metadata for AI suggestions."""
 
         self.client.force_login(self.owner)
 

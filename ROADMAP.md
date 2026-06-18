@@ -16,7 +16,7 @@
 - Spreadsheet previews
 
 ## Phase 4
-- Column mapping
+- AI suggestions
 - Transaction normalization
 
 ## Phase 5

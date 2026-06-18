@@ -62,7 +62,7 @@ class MergesetDetailView(OwnedMergesetQuerysetMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["upload_form"] = MergesetFileUploadForm()
         source_files = context["mergeset"].source_files.all()
-        context["mapping_ready"] = (
+        context["ai_suggestions_ready"] = (
             source_files.exists()
             and not source_files.exclude(
                 parse_status=MergesetFile.ParseStatus.PARSED
@@ -71,28 +71,28 @@ class MergesetDetailView(OwnedMergesetQuerysetMixin, DetailView):
         return context
 
 
-class MergesetMappingView(OwnedMergesetQuerysetMixin, DetailView):
-    """Render parsed source headers for column mapping."""
+class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
+    """Render the AI suggestion workspace for parsed source files."""
 
     model = Mergeset
-    template_name = "core/mergesets/mergeset_mapping.html"
+    template_name = "core/mergesets/mergeset_ai_suggestions.html"
     context_object_name = "mergeset"
 
     def get(self, request, *args, **kwargs):
-        """Require at least one successfully parsed file before mapping."""
+        """Require at least one successfully parsed file before AI suggestions."""
 
         self.object = self.get_object()
         source_files = self.object.source_files.all()
-        mapping_ready = (
+        ai_suggestions_ready = (
             source_files.exists()
             and not source_files.exclude(
                 parse_status=MergesetFile.ParseStatus.PARSED
             ).exists()
         )
-        if not mapping_ready:
+        if not ai_suggestions_ready:
             messages.error(
                 request,
-                "Upload files and resolve all parsing errors before column mapping.",
+                "Upload files and resolve all parsing errors before AI suggestions.",
             )
             return redirect("core:mergeset_detail", pk=self.object.pk)
         context = self.get_context_data(object=self.object)
