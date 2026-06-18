@@ -10,6 +10,7 @@ from django.urls import reverse
 
 from core.forms.uploads import MAX_UPLOAD_SIZE
 from core.models import Mergeset, MergesetFile
+from core.services.csv_parser import MAX_SAMPLE_ROWS
 
 
 User = get_user_model()
@@ -215,10 +216,47 @@ class MergesetFileUploadTests(TestCase):
         source_file = MergesetFile.objects.get()
         self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.PARSED)
         self.assertEqual(source_file.headers, ["Date", "Description", "Amount"])
+        self.assertEqual(
+            source_file.sample_rows,
+            [
+                ["2026-01-01", "Cafe", "10"],
+                ["2026-01-02", "Shop", "20"],
+            ],
+        )
         self.assertEqual(source_file.delimiter, ",")
         self.assertEqual(source_file.row_count, 2)
         self.assertEqual(source_file.parse_error, "")
         self.assertIsNotNone(source_file.parsed_at)
+
+    def test_upload_limits_sample_rows_for_ai_context(self) -> None:
+        """Parsing should keep a bounded sample of non-empty rows."""
+
+        self.client.force_login(self.owner)
+        rows = [f"2026-01-{day:02d},Merchant {day},{day}" for day in range(1, 15)]
+
+        self.client.post(
+            self.upload_url,
+            {
+                "files": [
+                    SimpleUploadedFile(
+                        "bank.csv",
+                        ("date,description,amount\n" + "\n".join(rows)).encode(),
+                    )
+                ]
+            },
+        )
+
+        source_file = MergesetFile.objects.get()
+        self.assertEqual(source_file.row_count, 14)
+        self.assertEqual(len(source_file.sample_rows), MAX_SAMPLE_ROWS)
+        self.assertEqual(
+            source_file.sample_rows[0],
+            ["2026-01-01", "Merchant 1", "1"],
+        )
+        self.assertEqual(
+            source_file.sample_rows[-1],
+            ["2026-01-10", "Merchant 10", "10"],
+        )
 
     def test_inconsistent_csv_is_stored_with_parse_error(self) -> None:
         """A malformed CSV should remain available with a useful error."""
@@ -239,6 +277,8 @@ class MergesetFileUploadTests(TestCase):
 
         source_file = MergesetFile.objects.get()
         self.assertEqual(source_file.parse_status, MergesetFile.ParseStatus.FAILED)
+        self.assertEqual(source_file.headers, [])
+        self.assertEqual(source_file.sample_rows, [])
         self.assertIsNone(source_file.row_count)
         self.assertIn("Row 2 has 2 columns; expected 3", source_file.parse_error)
 

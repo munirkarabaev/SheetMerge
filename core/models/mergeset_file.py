@@ -38,6 +38,7 @@ class MergesetFile(models.Model):
         default=ParseStatus.PENDING,
     )
     headers = models.JSONField(default=list, blank=True)
+    sample_rows = models.JSONField(default=list, blank=True)
     delimiter = models.CharField(max_length=1, blank=True)
     row_count = models.PositiveIntegerField(null=True, blank=True)
     parse_error = models.TextField(blank=True)

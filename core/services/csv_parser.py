@@ -10,6 +10,7 @@ from core.models import MergesetFile
 
 
 SNIFFED_DELIMITERS = ",;\t|"
+MAX_SAMPLE_ROWS = 10
 
 
 class CsvParseError(ValueError):
@@ -21,6 +22,7 @@ class CsvParseResult:
     """Structural metadata extracted from a CSV file."""
 
     headers: list[str]
+    sample_rows: list[list[str]]
     delimiter: str
     row_count: int
 
@@ -56,6 +58,7 @@ def read_csv_metadata(source_file: MergesetFile) -> CsvParseResult:
         _validate_headers(headers)
 
         row_count = 0
+        sample_rows = []
         for line_number, row in enumerate(reader, start=2):
             if not row or not any(value.strip() for value in row):
                 continue
@@ -65,6 +68,8 @@ def read_csv_metadata(source_file: MergesetFile) -> CsvParseResult:
                     f"expected {len(headers)}."
                 )
             row_count += 1
+            if len(sample_rows) < MAX_SAMPLE_ROWS:
+                sample_rows.append([value.strip() for value in row])
     except StopIteration as error:
         raise CsvParseError("The CSV file does not contain a header row.") from error
     except csv.Error as error:
@@ -72,6 +77,7 @@ def read_csv_metadata(source_file: MergesetFile) -> CsvParseResult:
 
     return CsvParseResult(
         headers=headers,
+        sample_rows=sample_rows,
         delimiter=dialect.delimiter,
         row_count=row_count,
     )
@@ -85,6 +91,7 @@ def parse_mergeset_file(source_file: MergesetFile) -> bool:
     except CsvParseError as error:
         source_file.parse_status = MergesetFile.ParseStatus.FAILED
         source_file.headers = []
+        source_file.sample_rows = []
         source_file.delimiter = ""
         source_file.row_count = None
         source_file.parse_error = str(error)
@@ -92,6 +99,7 @@ def parse_mergeset_file(source_file: MergesetFile) -> bool:
     else:
         source_file.parse_status = MergesetFile.ParseStatus.PARSED
         source_file.headers = result.headers
+        source_file.sample_rows = result.sample_rows
         source_file.delimiter = result.delimiter
         source_file.row_count = result.row_count
         source_file.parse_error = ""
@@ -102,6 +110,7 @@ def parse_mergeset_file(source_file: MergesetFile) -> bool:
         update_fields=[
             "parse_status",
             "headers",
+            "sample_rows",
             "delimiter",
             "row_count",
             "parse_error",
