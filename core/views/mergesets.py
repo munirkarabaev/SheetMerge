@@ -4,14 +4,26 @@ from pathlib import Path
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView
 
 from core.forms import MergePlanningMessageForm, MergesetFileUploadForm, MergesetForm
-from core.models import MergePlanningMessage, MergePlanningSession, Mergeset, MergesetFile
-from core.services import parse_mergeset_file
+from core.models import (
+    MergePlan,
+    MergePlanningMessage,
+    MergePlanningSession,
+    Mergeset,
+    MergesetFile,
+)
+from core.services import (
+    OpenAIPlanningError,
+    build_merge_preview,
+    parse_mergeset_file,
+    run_merge_planning_turn,
+)
 
 
 class OwnedMergesetQuerysetMixin(LoginRequiredMixin):
@@ -108,30 +120,57 @@ class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
         context["planning_session"] = self.planning_session
         context["planning_messages"] = self.planning_session.messages.all()
         context["message_form"] = kwargs.get("message_form", MergePlanningMessageForm())
+        context["latest_merge_plan"] = self.object.merge_plans.first()
         return context
 
     def post(self, request, *args, **kwargs):
-        """Save one user planning message and a placeholder assistant response."""
+        """Save one user planning message and request the next AI response."""
 
         form = MergePlanningMessageForm(request.POST)
         if not form.is_valid():
+            if self._is_async_request():
+                return JsonResponse(
+                    {"errors": form.errors.get_json_data()},
+                    status=400,
+                )
             context = self.get_context_data(object=self.object, message_form=form)
             return self.render_to_response(context)
 
-        MergePlanningMessage.objects.create(
+        user_message = MergePlanningMessage.objects.create(
             session=self.planning_session,
             role=MergePlanningMessage.Role.USER,
             content=form.cleaned_data["content"],
         )
-        MergePlanningMessage.objects.create(
-            session=self.planning_session,
-            role=MergePlanningMessage.Role.ASSISTANT,
-            content=(
-                "I saved those instructions. In the next step I will use them "
-                "with the parsed CSV headers and sample rows to ask follow-up "
-                "questions or draft a column mapping plan."
-            ),
-        )
+        try:
+            result = run_merge_planning_turn(self.planning_session)
+        except OpenAIPlanningError as error:
+            if self._is_async_request():
+                return JsonResponse({"error": str(error)}, status=500)
+            messages.error(self.request, str(error))
+        else:
+            if self._is_async_request():
+                return JsonResponse(
+                    {
+                        "user_message": {
+                            "role": user_message.role,
+                            "content": user_message.content,
+                        },
+                        "assistant_message": {
+                            "role": result.assistant_message.role,
+                            "content": result.assistant_message.content,
+                        },
+                        "status": self.planning_session.get_status_display(),
+                        "mapping_ready": result.merge_plan is not None,
+                        "mapping_url": (
+                            reverse(
+                                "core:mergeset_column_mapping",
+                                kwargs={"pk": self.object.pk},
+                            )
+                            if result.merge_plan is not None
+                            else ""
+                        ),
+                    }
+                )
         return redirect("core:mergeset_ai_suggestions", pk=self.object.pk)
 
     def _get_or_create_planning_session(self) -> MergePlanningSession:
@@ -141,6 +180,58 @@ class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
         if session is None:
             session = MergePlanningSession.objects.create(mergeset=self.object)
         return session
+
+    def _is_async_request(self) -> bool:
+        """Return whether the browser requested a JSON chat response."""
+
+        return self.request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+class MergesetPlanningResetView(LoginRequiredMixin, View):
+    """Delete the current AI planning conversation for a mergeset."""
+
+    http_method_names = ["post"]
+
+    def post(self, request, *args, **kwargs):
+        """Reset planning state and return to a fresh AI suggestions page."""
+
+        mergeset = get_object_or_404(
+            Mergeset,
+            pk=kwargs["pk"],
+            owner=request.user,
+        )
+        mergeset.planning_sessions.all().delete()
+        return redirect("core:mergeset_ai_suggestions", pk=mergeset.pk)
+
+
+class MergesetColumnMappingView(OwnedMergesetQuerysetMixin, DetailView):
+    """Render the latest AI-generated column mapping plan."""
+
+    model = Mergeset
+    template_name = "core/mergesets/mergeset_column_mapping.html"
+    context_object_name = "mergeset"
+
+    def get(self, request, *args, **kwargs):
+        """Require a generated merge plan before rendering mapping review."""
+
+        self.object = self.get_object()
+        self.merge_plan = self.object.merge_plans.first()
+        if self.merge_plan is None:
+            messages.error(request, "Generate an AI mapping plan before review.")
+            return redirect("core:mergeset_ai_suggestions", pk=self.object.pk)
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        """Add structured plan data for the review template."""
+
+        context = super().get_context_data(**kwargs)
+        plan_json = self.merge_plan.plan_json
+        context["merge_plan"] = self.merge_plan
+        context["final_columns"] = plan_json.get("final_columns", [])
+        context["file_mappings"] = plan_json.get("file_mappings", [])
+        context["merge_preview"] = build_merge_preview(self.merge_plan)
+        return context
 
 
 class MergesetDeleteView(LoginRequiredMixin, View):

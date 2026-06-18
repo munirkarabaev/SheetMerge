@@ -1,0 +1,194 @@
+{% extends "core/base.html" %}
+
+{% block title %}Column mapping | {{ mergeset.name }} | SheetMerge{% endblock title %}
+
+{% block page_shell %}
+<div class="ws-shell">
+    <header class="ws-nav">
+        <div class="ws-nav-left">
+            <a class="ws-logo" href="{% url 'users:dashboard' %}">
+                <span class="ws-logo-mark" aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white"
+                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <path d="M3 9h18M9 21V9"/>
+                    </svg>
+                </span>
+                <span class="ws-logo-name">SheetMerge</span>
+            </a>
+
+            <nav class="ws-breadcrumb" aria-label="Breadcrumb">
+                <a href="{% url 'core:mergeset_list' %}"
+                   class="topnav__link topnav__link--active">Mergesets</a>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+                <a href="{% url 'core:mergeset_detail' mergeset.pk %}">{{ mergeset.name }}</a>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+                <span class="ws-breadcrumb-active">Column mapping</span>
+            </nav>
+        </div>
+
+        <div class="ws-nav-right">
+            <a href="{% url 'core:billing' %}" class="ws-nav-btn">Settings</a>
+            <span class="ws-nav-divider" aria-hidden="true"></span>
+            <form method="post" action="{% url 'account_logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="ws-nav-btn">Sign out</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="ws-body">
+        <aside class="ws-sidebar">
+            <div class="ws-sidebar-section">
+                <div class="ws-sidebar-heading"><span>Workflow</span></div>
+                <div class="ws-steps">
+                    <div class="ws-step">
+                        <div class="ws-step-track">
+                            <div class="ws-step-dot ws-step-dot--complete"></div>
+                            <div class="ws-step-line ws-step-line--complete"></div>
+                        </div>
+                        <div class="ws-step-body">
+                            <p class="ws-step-label">Uploads</p>
+                            <p class="ws-step-title">Source files ready</p>
+                        </div>
+                    </div>
+                    <div class="ws-step">
+                        <div class="ws-step-track">
+                            <div class="ws-step-dot ws-step-dot--complete"></div>
+                            <div class="ws-step-line ws-step-line--complete"></div>
+                        </div>
+                        <div class="ws-step-body">
+                            <p class="ws-step-label">AI</p>
+                            <p class="ws-step-title">Mapping generated</p>
+                        </div>
+                    </div>
+                    <div class="ws-step ws-step--active">
+                        <div class="ws-step-track">
+                            <div class="ws-step-dot ws-step-dot--active"></div>
+                        </div>
+                        <div class="ws-step-body">
+                            <p class="ws-step-label">Review</p>
+                            <p class="ws-step-title">Column mapping</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="ws-main">
+            <div class="ws-content">
+                <header class="ws-page-header">
+                    <span class="ws-badge">Column mapping</span>
+                    <h1 class="ws-page-title">Review the AI mapping plan</h1>
+                    <p class="ws-page-meta">{{ merge_plan.ai_summary }}</p>
+                </header>
+
+                <section class="ws-card" aria-labelledby="final-columns-heading">
+                    <div class="ws-card-header">
+                        <p class="ws-eyebrow">Output</p>
+                        <h2 class="ws-card-title" id="final-columns-heading">Final columns</h2>
+                    </div>
+                    <div class="mapping-columns">
+                        {% for column in final_columns %}
+                            <div class="mapping-column">
+                                <span>{{ column.name }}</span>
+                                <small>{{ column.type }}</small>
+                            </div>
+                        {% empty %}
+                            <p class="ws-empty">No final columns were returned in this plan.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                {% for file_mapping in file_mappings %}
+                    <section class="ws-card" aria-labelledby="mapping-file-{{ forloop.counter }}">
+                        <div class="ws-card-header ws-card-header--row">
+                            <div>
+                                <p class="ws-eyebrow">Source file</p>
+                                <h2 class="ws-card-title" id="mapping-file-{{ forloop.counter }}">
+                                    {{ file_mapping.filename }}
+                                </h2>
+                            </div>
+                            <span class="ws-count-badge">
+                                {{ file_mapping.mappings|length }} mapping{{ file_mapping.mappings|length|pluralize }}
+                            </span>
+                        </div>
+                        <div class="mapping-list">
+                            {% for mapping in file_mapping.mappings %}
+                                <div class="mapping-row">
+                                    <div>
+                                        <p class="mapping-target">{{ mapping.target_column }}</p>
+                                        <p class="mapping-source">
+                                            {{ mapping.source_columns|join:", " }}
+                                        </p>
+                                    </div>
+                                    <span class="mapping-transform">{{ mapping.transform }}</span>
+                                </div>
+                            {% empty %}
+                                <p class="ws-empty">No mapped columns for this file.</p>
+                            {% endfor %}
+                        </div>
+                        {% if file_mapping.ignored_columns %}
+                            <div class="mapping-ignored">
+                                <span>Ignored</span>
+                                <p>{{ file_mapping.ignored_columns|join:", " }}</p>
+                            </div>
+                        {% endif %}
+                    </section>
+                {% empty %}
+                    <p class="ws-empty">No file mappings were returned in this plan.</p>
+                {% endfor %}
+
+                <section class="ws-card" aria-labelledby="preview-heading">
+                    <div class="ws-card-header ws-card-header--row">
+                        <div>
+                            <p class="ws-eyebrow">Preview</p>
+                            <h2 class="ws-card-title" id="preview-heading">Spreadsheet result</h2>
+                        </div>
+                        <span class="ws-count-badge">
+                            {{ merge_preview.rows|length }} row{{ merge_preview.rows|length|pluralize }}
+                        </span>
+                    </div>
+                    {% if merge_preview.rows %}
+                        <div class="ws-table-wrap">
+                            <table class="ws-table">
+                                <thead>
+                                    <tr>
+                                        {% for column in merge_preview.columns %}
+                                            <th>{{ column }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in merge_preview.rows %}
+                                        <tr>
+                                            {% for value in row.values %}
+                                                <td>{{ value }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="ws-empty">No preview rows could be generated from this plan.</p>
+                    {% endif %}
+                </section>
+
+                <div class="ws-workflow-footer">
+                    <a class="ws-btn-secondary" href="{% url 'core:mergeset_ai_suggestions' mergeset.pk %}">
+                        Back to AI chat
+                    </a>
+                    <span class="ws-btn-disabled" aria-disabled="true">Approve mapping</span>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock page_shell %}

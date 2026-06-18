@@ -7,11 +7,13 @@ from core.views import (
     HomePageView,
     MergesetAISuggestionsView,
     MergesetCreateView,
+    MergesetColumnMappingView,
     MergesetDeleteView,
     MergesetDetailView,
     MergesetFileDeleteView,
     MergesetFileUploadView,
     MergesetListView,
+    MergesetPlanningResetView,
     SupportPageView,
 )
 
@@ -31,6 +33,16 @@ urlpatterns = [
         "mergesets/<int:pk>/ai-suggestions/",
         MergesetAISuggestionsView.as_view(),
         name="mergeset_ai_suggestions",
+    ),
+    path(
+        "mergesets/<int:pk>/ai-suggestions/reset/",
+        MergesetPlanningResetView.as_view(),
+        name="mergeset_planning_reset",
+    ),
+    path(
+        "mergesets/<int:pk>/column-mapping/",
+        MergesetColumnMappingView.as_view(),
+        name="mergeset_column_mapping",
     ),
     path(
         "mergesets/<int:pk>/files/",

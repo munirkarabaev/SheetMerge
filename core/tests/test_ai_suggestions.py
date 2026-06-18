@@ -1,5 +1,8 @@
 """Tests for the initial AI suggestion workspace."""
 
+from unittest.mock import patch
+from types import SimpleNamespace
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -7,9 +10,11 @@ from django.urls import reverse
 from core.models import (
     MergePlanningMessage,
     MergePlanningSession,
+    MergePlan,
     Mergeset,
     MergesetFile,
 )
+from core.services import OpenAIPlanningError
 
 
 User = get_user_model()
@@ -36,6 +41,10 @@ class AISuggestionsViewTests(TestCase):
         )
         self.ai_suggestions_url = reverse(
             "core:mergeset_ai_suggestions",
+            kwargs={"pk": self.mergeset.pk},
+        )
+        self.reset_url = reverse(
+            "core:mergeset_planning_reset",
             kwargs={"pk": self.mergeset.pk},
         )
 
@@ -138,7 +147,7 @@ class AISuggestionsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "AI suggestion assistant")
         self.assertContains(response, "Send message")
-        self.assertContains(response, "Run AI merge plan")
+        self.assertContains(response, "Review column mapping")
         self.assertContains(response, "Your instructions")
         content = response.content.decode()
         textarea_start = content.index('id="ai-instructions"')
@@ -203,6 +212,7 @@ class AISuggestionsViewTests(TestCase):
         self.assertContains(response, "Should refunds be positive or negative?")
         self.assertContains(response, "ai-message--user")
         self.assertContains(response, "ai-message--assistant")
+        self.assertContains(response, "Reset chat")
 
     def test_ai_suggestions_post_saves_user_message_and_placeholder_reply(self) -> None:
         """Posting instructions should append conversation messages."""
@@ -210,27 +220,80 @@ class AISuggestionsViewTests(TestCase):
         self.create_source_file()
         self.client.force_login(self.owner)
 
-        response = self.client.post(
-            self.ai_suggestions_url,
-            {"content": "Create Date, Description, Amount, and Source columns."},
-        )
+        with patch("core.views.mergesets.run_merge_planning_turn") as mock_run_turn:
+            response = self.client.post(
+                self.ai_suggestions_url,
+                {"content": "Create Date, Description, Amount, and Source columns."},
+            )
 
         self.assertRedirects(response, self.ai_suggestions_url)
         session = MergePlanningSession.objects.get()
+        mock_run_turn.assert_called_once_with(session)
         self.assertSequenceEqual(
             list(session.messages.values_list("role", flat=True)),
-            [
-                MergePlanningMessage.Role.USER,
-                MergePlanningMessage.Role.ASSISTANT,
-            ],
+            [MergePlanningMessage.Role.USER],
         )
         self.assertEqual(
             session.messages.first().content,
             "Create Date, Description, Amount, and Source columns.",
         )
-        self.assertIn(
-            "parsed CSV headers and sample rows",
-            session.messages.last().content,
+
+    def test_ai_suggestions_async_post_returns_assistant_message(self) -> None:
+        """Async chat submissions should return JSON for in-place updates."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        def fake_run_turn(session):
+            assistant_message = MergePlanningMessage.objects.create(
+                session=session,
+                role=MergePlanningMessage.Role.ASSISTANT,
+                content="Should refunds be positive or negative?",
+            )
+            return SimpleNamespace(
+                assistant_message=assistant_message,
+                merge_plan=None,
+            )
+
+        with patch("core.views.mergesets.run_merge_planning_turn", fake_run_turn):
+            response = self.client.post(
+                self.ai_suggestions_url,
+                {"content": "Create Date and Amount columns."},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(
+            payload["user_message"]["content"],
+            "Create Date and Amount columns.",
+        )
+        self.assertEqual(
+            payload["assistant_message"]["content"],
+            "Should refunds be positive or negative?",
+        )
+        self.assertFalse(payload["mapping_ready"])
+
+    def test_ai_suggestions_async_post_returns_error_json(self) -> None:
+        """Async OpenAI failures should return JSON instead of redirecting."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        with patch(
+            "core.views.mergesets.run_merge_planning_turn",
+            side_effect=OpenAIPlanningError("OPENAI_API_KEY is not configured."),
+        ):
+            response = self.client.post(
+                self.ai_suggestions_url,
+                {"content": "Create Date and Amount columns."},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json(),
+            {"error": "OPENAI_API_KEY is not configured."},
         )
 
     def test_ai_suggestions_post_does_not_flash_on_upload_page(self) -> None:
@@ -239,10 +302,11 @@ class AISuggestionsViewTests(TestCase):
         self.create_source_file()
         self.client.force_login(self.owner)
 
-        self.client.post(
-            self.ai_suggestions_url,
-            {"content": "Create Date and Amount columns."},
-        )
+        with patch("core.views.mergesets.run_merge_planning_turn"):
+            self.client.post(
+                self.ai_suggestions_url,
+                {"content": "Create Date and Amount columns."},
+            )
         response = self.client.get(
             reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
         )
@@ -275,3 +339,60 @@ class AISuggestionsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertFalse(MergePlanningMessage.objects.exists())
+
+    def test_reset_chat_deletes_existing_planning_session(self) -> None:
+        """Resetting chat should discard messages and generated plans."""
+
+        self.create_source_file()
+        session = MergePlanningSession.objects.create(mergeset=self.mergeset)
+        MergePlanningMessage.objects.create(
+            session=session,
+            role=MergePlanningMessage.Role.USER,
+            content="Use Date and Amount.",
+        )
+        MergePlan.objects.create(
+            mergeset=self.mergeset,
+            session=session,
+            status=MergePlan.Status.NEEDS_REVIEW,
+            plan_json={"status": "mapping_ready"},
+        )
+        self.client.force_login(self.owner)
+
+        response = self.client.post(self.reset_url)
+
+        self.assertRedirects(response, self.ai_suggestions_url)
+        self.assertFalse(MergePlanningSession.objects.filter(pk=session.pk).exists())
+        self.assertEqual(MergePlanningSession.objects.count(), 1)
+        self.assertFalse(MergePlanningMessage.objects.exists())
+        self.assertFalse(MergePlan.objects.exists())
+
+    def test_reset_chat_requires_authentication(self) -> None:
+        """Anonymous reset attempts should redirect to login."""
+
+        response = self.client.post(self.reset_url)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('account_login')}?next={self.reset_url}",
+        )
+
+    def test_reset_chat_is_limited_to_owner(self) -> None:
+        """Another user should not reset a private mergeset conversation."""
+
+        self.create_source_file()
+        session = MergePlanningSession.objects.create(mergeset=self.mergeset)
+        self.client.force_login(self.other_user)
+
+        response = self.client.post(self.reset_url)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(MergePlanningSession.objects.filter(pk=session.pk).exists())
+
+    def test_reset_chat_rejects_get_requests(self) -> None:
+        """Resetting chat should require POST."""
+
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.reset_url)
+
+        self.assertEqual(response.status_code, 405)

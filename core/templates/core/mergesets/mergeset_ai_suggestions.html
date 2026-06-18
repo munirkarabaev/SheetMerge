@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}AI suggestions | {{ mergeset.name }} | SheetMerge{% endblock title %}
 
@@ -122,6 +123,12 @@
                     </p>
                 </header>
 
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="ws-alert ws-alert--{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
                 <div class="ai-suggestions-layout">
                     <aside class="ai-panel" aria-labelledby="assistant-heading">
                         <div class="ai-panel-header">
@@ -130,10 +137,20 @@
                                 <h2 id="assistant-heading">AI suggestion assistant</h2>
                                 <p>Tell the AI what the final spreadsheet should look like.</p>
                             </div>
-                            <span class="ai-status">{{ planning_session.get_status_display }}</span>
+                            <span class="ai-status" data-ai-status>{{ planning_session.get_status_display }}</span>
+                            {% if planning_messages %}
+                                <form
+                                    method="post"
+                                    action="{% url 'core:mergeset_planning_reset' mergeset.pk %}"
+                                    onsubmit="return confirm('Reset this AI conversation and discard the current mapping plan?');"
+                                >
+                                    {% csrf_token %}
+                                    <button type="submit" class="ai-reset-btn">Reset chat</button>
+                                </form>
+                            {% endif %}
                         </div>
 
-                        <div class="ai-conversation">
+                        <div class="ai-conversation" data-ai-conversation>
                             {% if planning_messages %}
                                 {% for message in planning_messages %}
                                     <div class="ai-message ai-message--{{ message.role }}">
@@ -151,7 +168,7 @@
                             {% endif %}
                         </div>
 
-                        <form method="post" class="ai-composer">
+                        <form method="post" class="ai-composer" data-ai-chat-form>
                             {% csrf_token %}
                             <label for="{{ message_form.content.id_for_label }}">Your instructions</label>
                             {{ message_form.content }}
@@ -170,10 +187,31 @@
                     <a class="ws-btn-secondary" href="{% url 'core:mergeset_detail' mergeset.pk %}">
                         Back to uploads
                     </a>
-                    <span class="ws-btn-disabled" aria-disabled="true">Run AI merge plan</span>
+                    {% if latest_merge_plan %}
+                        <a
+                            class="ws-btn-primary"
+                            href="{% url 'core:mergeset_column_mapping' mergeset.pk %}"
+                            data-ai-mapping-link
+                        >
+                            Review column mapping
+                        </a>
+                    {% else %}
+                        <a
+                            class="ws-btn-primary"
+                            href="#"
+                            data-ai-mapping-link
+                            hidden
+                        >
+                            Review column mapping
+                        </a>
+                        <span class="ws-btn-disabled" aria-disabled="true" data-ai-mapping-disabled>
+                            Review column mapping
+                        </span>
+                    {% endif %}
                 </div>
             </div>
         </main>
     </div>
 </div>
+<script src="{% static 'core/js/ai_chat.js' %}"></script>
 {% endblock page_shell %}
