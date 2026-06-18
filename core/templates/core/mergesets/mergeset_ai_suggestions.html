@@ -143,21 +143,10 @@
                             {% else %}
                                 <div class="ai-message ai-message--assistant">
                                     <p>
-                                        I will inspect the uploaded files, ask any important follow-up questions,
-                                        and prepare a merge plan that Python can validate and execute.
+                                        I will review the parsed CSV headers and sample rows, then ask any important
+                                        follow-up questions before preparing a column mapping plan. Tell me what
+                                        columns you want in the final spreadsheet and any rules I should follow.
                                     </p>
-                                </div>
-                                <div class="ai-prompt-examples">
-                                    <p>Try asking:</p>
-                                    <button type="button" disabled>
-                                        Merge all transactions into Date, Description, and Amount
-                                    </button>
-                                    <button type="button" disabled>
-                                        Treat debit values as negative amounts
-                                    </button>
-                                    <button type="button" disabled>
-                                        Ignore balance and account-number columns
-                                    </button>
                                 </div>
                             {% endif %}
                         </div>

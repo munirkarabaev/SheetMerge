@@ -132,7 +132,6 @@ class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
                 "questions or draft a column mapping plan."
             ),
         )
-        messages.success(request, "Saved planning instructions.")
         return redirect("core:mergeset_ai_suggestions", pk=self.object.pk)
 
     def _get_or_create_planning_session(self) -> MergePlanningSession:

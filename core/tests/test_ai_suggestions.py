@@ -149,6 +149,7 @@ class AISuggestionsViewTests(TestCase):
         self.assertNotContains(response, "Scanned source")
         self.assertNotContains(response, "Detected source columns")
         self.assertNotContains(response, "Awaiting suggestion")
+        self.assertNotContains(response, "Try asking")
         self.assertNotContains(response, "<select")
 
     def test_upload_page_enables_ai_suggestions_when_all_files_are_parsed(self) -> None:
@@ -231,6 +232,22 @@ class AISuggestionsViewTests(TestCase):
             "parsed CSV headers and sample rows",
             session.messages.last().content,
         )
+
+    def test_ai_suggestions_post_does_not_flash_on_upload_page(self) -> None:
+        """Saving chat instructions should not leak a message into uploads."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        self.client.post(
+            self.ai_suggestions_url,
+            {"content": "Create Date and Amount columns."},
+        )
+        response = self.client.get(
+            reverse("core:mergeset_detail", kwargs={"pk": self.mergeset.pk})
+        )
+
+        self.assertNotContains(response, "Saved planning instructions.")
 
     def test_ai_suggestions_post_rejects_blank_message(self) -> None:
         """Blank chat submissions should not create planning messages."""
