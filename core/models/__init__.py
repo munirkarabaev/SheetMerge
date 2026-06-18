@@ -2,5 +2,12 @@
 
 from core.models.mergeset import Mergeset
 from core.models.mergeset_file import MergesetFile
+from core.models.merge_planning import MergePlan, MergePlanningMessage, MergePlanningSession
 
-__all__ = ["Mergeset", "MergesetFile"]
+__all__ = [
+    "MergePlan",
+    "MergePlanningMessage",
+    "MergePlanningSession",
+    "Mergeset",
+    "MergesetFile",
+]
