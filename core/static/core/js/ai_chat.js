@@ -24,6 +24,13 @@ document.querySelectorAll("[data-ai-chat-form]").forEach((form) => {
         return message;
     };
 
+    textarea.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            form.requestSubmit();
+        }
+    });
+
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 

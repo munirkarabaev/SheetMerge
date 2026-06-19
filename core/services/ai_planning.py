@@ -47,9 +47,12 @@ def build_merge_planning_context(session: MergePlanningSession) -> PlanningConte
         payload={
             "mergeset": _build_mergeset_payload(mergeset),
             "source_files": [
-                _build_source_file_payload(source_file)
-                for source_file in mergeset.source_files.filter(
-                    parse_status=MergesetFile.ParseStatus.PARSED
+                _build_source_file_payload(index, source_file)
+                for index, source_file in enumerate(
+                    mergeset.source_files.filter(
+                        parse_status=MergesetFile.ParseStatus.PARSED
+                    ),
+                    start=1,
                 )
             ],
             "conversation": [
@@ -287,7 +290,14 @@ def _build_system_prompt() -> str:
         "safe column mapping. Write assistant_message in a natural, helpful "
         "tone, not a robotic checklist. When asking for clarification, state "
         "the exact decision you need the user to make, which source columns or "
-        "mapping options you are choosing between, and why it matters. When "
+        "mapping options you are choosing between, and why it matters. Guide "
+        "the user without requiring them to inspect the spreadsheets. Make "
+        "your best guess for each uncertain mapping and ask the user to "
+        "confirm or correct it. Refer to files by file_number and filename, "
+        "for example: 'For file 1 (bank.csv), I would use Posted Date as the "
+        "date column. For file 2 (revolut.csv), I would use Completed Date. "
+        "Is that right?' Do not ask abstract questions like 'which date field' "
+        "without naming the specific files and columns. When "
         "returning mapping_ready, tell the user the plan is ready and they "
         "should proceed to column mapping. Preserve every final output column "
         "the user requests. If the user asks to keep all columns, all fields, "
@@ -310,10 +320,11 @@ def _build_mergeset_payload(mergeset: Mergeset) -> dict[str, Any]:
     }
 
 
-def _build_source_file_payload(source_file: MergesetFile) -> dict[str, Any]:
+def _build_source_file_payload(index: int, source_file: MergesetFile) -> dict[str, Any]:
     """Return parsed source-file context for AI planning."""
 
     return {
+        "file_number": index,
         "id": source_file.id,
         "filename": source_file.original_name,
         "headers": source_file.headers,
@@ -341,6 +352,8 @@ def _build_response_contract() -> dict[str, Any]:
             "If the user asks to keep all columns, include all uploaded source headers as final columns unless they explicitly exclude some.",
             "Do not default to a Date, Description, Amount transaction layout unless the user requested that simplified layout.",
             "Use result_operations for whole-spreadsheet edits such as sorting rows after mapping.",
+            "For uncertain mappings, make a best guess per file and ask the user to confirm or correct it.",
+            "Clarification questions must name the file number, filename, and candidate source columns instead of asking abstractly.",
         ],
         "needs_clarification": {
             "required_fields": ["status", "assistant_message", "questions"],

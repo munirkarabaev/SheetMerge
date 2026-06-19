@@ -105,6 +105,7 @@ class MergePlanningContextTests(TestCase):
             context.payload["source_files"],
             [
                 {
+                    "file_number": 1,
                     "id": source_file.id,
                     "filename": "bank.csv",
                     "headers": ["Date", "Description", "Debit", "Credit"],
@@ -223,6 +224,19 @@ class MergePlanningContextTests(TestCase):
         self.assertIn("proceed to column mapping", context.system_prompt)
         self.assertIn("source columns or mapping options", workflow_rules[6])
         self.assertIn("proceed to column mapping", workflow_rules[7])
+
+    def test_context_requires_per_file_guessing_for_clarifications(self) -> None:
+        """Prompt rules should make the AI guide users with concrete guesses."""
+
+        context = build_merge_planning_context(self.session)
+        workflow_rules = context.payload["response_contract"]["workflow_rules"]
+
+        self.assertIn("without requiring them to inspect", context.system_prompt)
+        self.assertIn("best guess for each uncertain mapping", context.system_prompt)
+        self.assertIn("For file 1", context.system_prompt)
+        self.assertIn("Do not ask abstract questions", context.system_prompt)
+        self.assertIn("best guess per file", workflow_rules[12])
+        self.assertIn("file number, filename", workflow_rules[13])
 
     def test_context_tells_ai_to_preserve_requested_wide_outputs(self) -> None:
         """Prompt rules should prevent collapsing wide files to defaults."""

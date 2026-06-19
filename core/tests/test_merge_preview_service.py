@@ -135,6 +135,38 @@ class MergePreviewServiceTests(TestCase):
             ],
         )
 
+    def test_build_merge_preview_does_not_double_negate_signed_debits(self) -> None:
+        """Signed debit values should not receive a second minus sign."""
+
+        source_file = MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file=SimpleUploadedFile(
+                "signed-debits.csv",
+                (
+                    b"Transaction Date,Description,Debit,Credit\n"
+                    b"2026-01-01,Cafe,-4.50,\n"
+                    b"2026-01-02,Refund,,2.00\n"
+                    b"2026-01-03,Fee,(3.25),\n"
+                ),
+            ),
+            original_name="signed-debits.csv",
+            file_size=140,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["Transaction Date", "Description", "Debit", "Credit"],
+            delimiter=",",
+            row_count=3,
+        )
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["file_id"] = source_file.id
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(
+            [row["Amount"] for row in preview.rows],
+            ["-4.50", "2.00", "-3.25"],
+        )
+
     def test_build_merge_preview_respects_row_limit(self) -> None:
         """Preview generation should cap rows for page rendering."""
 
@@ -155,6 +187,140 @@ class MergePreviewServiceTests(TestCase):
 
         self.assertEqual(preview.rows[0]["Date"], "2026-01-02")
         self.assertEqual(preview.rows[1]["Date"], "2026-01-01")
+
+    def test_build_merge_preview_normalizes_common_date_formats(self) -> None:
+        """Date transforms should convert source dates to one canonical format."""
+
+        source_file = MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file=SimpleUploadedFile(
+                "mixed-dates.csv",
+                (
+                    b"Transaction Date,Description,Debit,Credit\n"
+                    b"01/02/2026,Cafe,4.50,\n"
+                    b"2026-03-04T10:15:00,Shop,6.00,\n"
+                    b"5 Apr 2026,Train,7.25,\n"
+                ),
+            ),
+            original_name="mixed-dates.csv",
+            file_size=150,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["Transaction Date", "Description", "Debit", "Credit"],
+            delimiter=",",
+            row_count=3,
+        )
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["file_id"] = source_file.id
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(
+            [row["Date"] for row in preview.rows],
+            ["2026-02-01", "2026-03-04", "2026-04-05"],
+        )
+
+    def test_build_merge_preview_normalizes_date_typed_columns_when_copied(self) -> None:
+        """Date output columns should normalize even when the transform is copy."""
+
+        source_file = MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file=SimpleUploadedFile(
+                "copy-date.csv",
+                b"Transaction Date,Description,Debit,Credit\n01/02/2026,Cafe,4.50,\n",
+            ),
+            original_name="copy-date.csv",
+            file_size=80,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["Transaction Date", "Description", "Debit", "Credit"],
+            delimiter=",",
+            row_count=1,
+        )
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["file_id"] = source_file.id
+        plan.plan_json["file_mappings"][0]["mappings"][0]["transform"] = "copy"
+        plan.plan_json["file_mappings"][0]["mappings"][0]["source_columns"] = [
+            "Transaction Date"
+        ]
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(preview.rows[0]["Date"], "2026-02-01")
+
+    def test_build_merge_preview_sorts_normalized_dates_chronologically(self) -> None:
+        """Sort operations should use chronological date order after normalization."""
+
+        source_file = MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file=SimpleUploadedFile(
+                "unsorted-dates.csv",
+                (
+                    b"Transaction Date,Description,Debit,Credit\n"
+                    b"15/01/2026,Middle,4.50,\n"
+                    b"2026-01-03,First,6.00,\n"
+                    b"02/02/2026,Last,7.25,\n"
+                ),
+            ),
+            original_name="unsorted-dates.csv",
+            file_size=150,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["Transaction Date", "Description", "Debit", "Credit"],
+            delimiter=",",
+            row_count=3,
+        )
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["file_id"] = source_file.id
+        plan.plan_json["result_operations"] = [
+            {"type": "sort", "column": "Date", "direction": "ascending"}
+        ]
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(
+            [row["Description"] for row in preview.rows],
+            ["First", "Middle", "Last"],
+        )
+        self.assertEqual(
+            [row["Date"] for row in preview.rows],
+            ["2026-01-03", "2026-01-15", "2026-02-02"],
+        )
+
+    def test_build_merge_preview_keeps_unrecognized_dates_at_end_when_sorting(self) -> None:
+        """Rows with unparseable dates should remain visible after valid dated rows."""
+
+        source_file = MergesetFile.objects.create(
+            mergeset=self.mergeset,
+            file=SimpleUploadedFile(
+                "bad-date.csv",
+                (
+                    b"Transaction Date,Description,Debit,Credit\n"
+                    b"not a date,Unknown,4.50,\n"
+                    b"2026-01-03,Known,6.00,\n"
+                ),
+            ),
+            original_name="bad-date.csv",
+            file_size=100,
+            parse_status=MergesetFile.ParseStatus.PARSED,
+            headers=["Transaction Date", "Description", "Debit", "Credit"],
+            delimiter=",",
+            row_count=2,
+        )
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["file_id"] = source_file.id
+        plan.plan_json["result_operations"] = [
+            {"type": "sort", "column": "Date", "direction": "ascending"}
+        ]
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(
+            [row["Description"] for row in preview.rows],
+            ["Known", "Unknown"],
+        )
+        self.assertEqual(preview.rows[-1]["Date"], "not a date")
 
     def test_build_merge_preview_defaults_to_all_rows(self) -> None:
         """Default preview generation should not truncate spreadsheet rows."""
