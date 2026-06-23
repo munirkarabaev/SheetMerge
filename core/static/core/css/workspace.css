@@ -166,6 +166,7 @@
 .mapping-revision-form textarea { min-height: 96px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 7px; background: #fafafa; color: #374151; font: inherit; font-size: 14px; line-height: 1.5; resize: vertical; }
 .revision-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .revision-loading { display: inline-flex; align-items: center; gap: 7px; color: #4b5563; font-size: 13px; }
+.revision-loading[hidden] { display: none; }
 .revision-spinner { width: 16px; height: 16px; border: 2px solid #d1d5db; border-top-color: #107c41; border-radius: 50%; animation: revision-spin 0.75s linear infinite; }
 .revision-error { margin: 0; }
 @keyframes revision-spin { to { transform: rotate(360deg); } }

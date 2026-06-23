@@ -8,6 +8,7 @@ from core.views import (
     MergesetAISuggestionsView,
     MergesetCreateView,
     MergesetColumnMappingView,
+    MergesetCsvExportView,
     MergesetDeleteView,
     MergesetDetailView,
     MergesetFileDeleteView,
@@ -43,6 +44,11 @@ urlpatterns = [
         "mergesets/<int:pk>/column-mapping/",
         MergesetColumnMappingView.as_view(),
         name="mergeset_column_mapping",
+    ),
+    path(
+        "mergesets/<int:pk>/column-mapping/export.csv",
+        MergesetCsvExportView.as_view(),
+        name="mergeset_export_csv",
     ),
     path(
         "mergesets/<int:pk>/files/",

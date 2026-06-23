@@ -225,6 +225,9 @@
                     <a class="ws-btn-secondary" href="{% url 'core:mergeset_ai_suggestions' mergeset.pk %}">
                         Back to AI chat
                     </a>
+                    <a class="ws-btn-primary" href="{% url 'core:mergeset_export_csv' mergeset.pk %}">
+                        Download CSV
+                    </a>
                     <span class="ws-btn-disabled" aria-disabled="true">Approve mapping</span>
                 </div>
             </div>

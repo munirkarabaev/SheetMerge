@@ -61,6 +61,10 @@ class ColumnMappingViewTests(TestCase):
             "core:mergeset_column_mapping",
             kwargs={"pk": self.mergeset.pk},
         )
+        self.export_url = reverse(
+            "core:mergeset_export_csv",
+            kwargs={"pk": self.mergeset.pk},
+        )
 
     def create_source_file(self) -> MergesetFile:
         """Create a parsed source file so AI suggestions can open."""
@@ -184,6 +188,8 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "data-revision-error")
         self.assertContains(response, "-4.50")
         self.assertContains(response, "Back to AI chat")
+        self.assertContains(response, "Download CSV")
+        self.assertContains(response, self.export_url)
 
     def test_column_mapping_post_requests_ai_revision(self) -> None:
         """Submitting a revision should call the AI revision service."""
@@ -271,6 +277,58 @@ class ColumnMappingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "This field is required")
         mock_revision.assert_not_called()
+
+    def test_csv_export_requires_authentication(self) -> None:
+        """Anonymous users should be redirected before CSV export."""
+
+        response = self.client.get(self.export_url)
+
+        self.assertRedirects(
+            response,
+            f"{reverse('account_login')}?next={self.export_url}",
+        )
+
+    def test_csv_export_is_limited_to_owner(self) -> None:
+        """Another user should not export a private merge result."""
+
+        self.create_merge_plan()
+        self.client.force_login(self.other_user)
+
+        response = self.client.get(self.export_url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_csv_export_redirects_without_plan(self) -> None:
+        """Export should require a generated merge plan."""
+
+        self.create_source_file()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.export_url)
+
+        self.assertRedirects(
+            response,
+            reverse("core:mergeset_ai_suggestions", kwargs={"pk": self.mergeset.pk}),
+        )
+
+    def test_csv_export_downloads_latest_merge_preview(self) -> None:
+        """CSV export should match the deterministic mapped preview rows."""
+
+        self.create_merge_plan()
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.export_url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertEqual(
+            response["Content-Disposition"],
+            'attachment; filename="monthly-statements.csv"',
+        )
+        self.assertEqual(
+            response.content.decode(),
+            "Date,Amount\r\n2026-01-01,-4.50\r\n",
+        )
 
     def test_ai_suggestions_links_to_existing_mapping_plan(self) -> None:
         """AI suggestions should link to review when a plan exists."""

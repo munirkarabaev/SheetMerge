@@ -4,6 +4,7 @@ from core.views.home import HomePageView
 from core.views.mergesets import (
     MergesetColumnMappingView,
     MergesetCreateView,
+    MergesetCsvExportView,
     MergesetAISuggestionsView,
     MergesetDeleteView,
     MergesetDetailView,
@@ -20,6 +21,7 @@ __all__ = [
     "MergesetAISuggestionsView",
     "MergesetColumnMappingView",
     "MergesetCreateView",
+    "MergesetCsvExportView",
     "MergesetDeleteView",
     "MergesetDetailView",
     "MergesetFileDeleteView",
