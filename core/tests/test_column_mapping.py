@@ -15,6 +15,7 @@ from core.models import (
     Mergeset,
     MergesetFile,
 )
+from core.services import OpenAIPlanningError
 
 
 User = get_user_model()
@@ -178,6 +179,9 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "core/js/column_mapping.js")
         self.assertContains(response, "Ask AI to edit the result")
         self.assertContains(response, "Ask AI to revise")
+        self.assertContains(response, "data-revision-form")
+        self.assertContains(response, "data-revision-loading")
+        self.assertContains(response, "data-revision-error")
         self.assertContains(response, "-4.50")
         self.assertContains(response, "Back to AI chat")
 
@@ -198,6 +202,62 @@ class ColumnMappingViewTests(TestCase):
             merge_plan,
             "Sort it in chronological order.",
         )
+
+    def test_column_mapping_async_post_returns_reload_url(self) -> None:
+        """Async revisions should let the browser wait before reloading."""
+
+        merge_plan = self.create_merge_plan()
+        self.client.force_login(self.owner)
+
+        with patch("core.views.mergesets.run_merge_plan_revision") as mock_revision:
+            response = self.client.post(
+                self.mapping_url,
+                {"instruction": "Add a Source column."},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"redirect_url": self.mapping_url})
+        mock_revision.assert_called_once_with(merge_plan, "Add a Source column.")
+
+    def test_column_mapping_async_post_returns_revision_error(self) -> None:
+        """Async AI failures should return inline error text for the page."""
+
+        self.create_merge_plan()
+        self.client.force_login(self.owner)
+
+        with patch(
+            "core.views.mergesets.run_merge_plan_revision",
+            side_effect=OpenAIPlanningError("OPENAI_API_KEY is not configured."),
+        ):
+            response = self.client.post(
+                self.mapping_url,
+                {"instruction": "Add a Source column."},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json(),
+            {"error": "OPENAI_API_KEY is not configured."},
+        )
+
+    def test_column_mapping_async_post_rejects_blank_revision(self) -> None:
+        """Blank async revision requests should return validation JSON."""
+
+        self.create_merge_plan()
+        self.client.force_login(self.owner)
+
+        with patch("core.views.mergesets.run_merge_plan_revision") as mock_revision:
+            response = self.client.post(
+                self.mapping_url,
+                {"instruction": ""},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("instruction", response.json()["errors"])
+        mock_revision.assert_not_called()
 
     def test_column_mapping_post_rejects_blank_revision(self) -> None:
         """Blank revision requests should not call the AI service."""

@@ -200,7 +200,7 @@
                         <p class="ws-card-sub">Use this for changes like sorting rows, renaming columns, or adjusting mappings.</p>
                     </div>
                     <div class="ws-card-body">
-                        <form method="post" class="mapping-revision-form">
+                        <form method="post" class="mapping-revision-form" data-revision-form>
                             {% csrf_token %}
                             <label for="{{ revision_form.instruction.id_for_label }}">
                                 Requested edit
@@ -209,7 +209,14 @@
                             {% if revision_form.instruction.errors %}
                                 <p class="ws-field-error">{{ revision_form.instruction.errors|striptags }}</p>
                             {% endif %}
-                            <button type="submit" class="ws-btn-primary">Ask AI to revise</button>
+                            <p class="ws-field-error revision-error" data-revision-error hidden></p>
+                            <div class="revision-actions">
+                                <button type="submit" class="ws-btn-primary">Ask AI to revise</button>
+                                <span class="revision-loading" data-revision-loading hidden>
+                                    <span class="revision-spinner" aria-hidden="true"></span>
+                                    <span>Revising</span>
+                                </span>
+                            </div>
                         </form>
                     </div>
                 </section>

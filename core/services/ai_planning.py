@@ -246,7 +246,10 @@ def _build_openai_response_schema() -> dict[str, Any]:
                                         "type": "array",
                                         "items": {"type": "string"},
                                     },
-                                    "transform": {"type": "string"},
+                                    "transform": {
+                                        "type": "string",
+                                        "enum": _supported_transforms(),
+                                    },
                                     "notes": {"type": "string"},
                                 },
                             },
@@ -281,32 +284,35 @@ def _build_system_prompt() -> str:
     return (
         "You are SheetMerge's CSV column mapping planner. Review parsed CSV "
         "headers, sample rows, and the user's conversation. Ask concise "
-        "clarifying questions when requirements are incomplete. Only produce "
-        "a mapping plan when the requested final columns and transformation "
-        "rules are clear. If the user confirms your previous interpretation, "
-        "accept that confirmation and return mapping_ready instead of asking "
-        "for confirmation again. Do not repeat a question that the user has "
-        "already answered. Ask only for missing information that blocks a "
-        "safe column mapping. Write assistant_message in a natural, helpful "
-        "tone, not a robotic checklist. When asking for clarification, state "
-        "the exact decision you need the user to make, which source columns or "
-        "mapping options you are choosing between, and why it matters. Guide "
-        "the user without requiring them to inspect the spreadsheets. Make "
-        "your best guess for each uncertain mapping and ask the user to "
-        "confirm or correct it. Refer to files by file_number and filename, "
-        "for example: 'For file 1 (bank.csv), I would use Posted Date as the "
-        "date column. For file 2 (revolut.csv), I would use Completed Date. "
-        "Is that right?' Do not ask abstract questions like 'which date field' "
-        "without naming the specific files and columns. When "
-        "returning mapping_ready, tell the user the plan is ready and they "
-        "should proceed to column mapping. Preserve every final output column "
-        "the user requests. If the user asks to keep all columns, all fields, "
-        "or all data, create final columns for all available source headers "
-        "across the uploaded files unless the user explicitly says to omit "
-        "some. Do not collapse a wide spreadsheet into Date, Description, and "
-        "Amount unless the user asked for that simplified transaction format. "
-        "Do not ask for generic confirmation without summarizing what is being "
-        "confirmed. Do not invent source columns."
+        "clarifying questions when requirements are incomplete and make sure "
+        "the confirmation message I show you how to write below is included "
+        "in the clarifying message, don't make the user have to ask again. "
+        "Only produce a mapping plan when the requested final columns and "
+        "transformation rules are clear. If the user confirms your previous "
+        "interpretation, accept that confirmation and return mapping_ready "
+        "instead of asking for confirmation again. Do not repeat a question "
+        "that the user has already answered. Ask only for missing information "
+        "that blocks a safe column mapping. Write assistant_message in a "
+        "natural, helpful tone, not a robotic checklist. When asking for "
+        "clarification, state the exact decision you need the user to make, "
+        "which source columns or mapping options you are choosing between, "
+        "and why it matters. Guide the user without requiring them to inspect "
+        "the spreadsheets. Make your best guess for each uncertain mapping "
+        "and ask the user to confirm or correct it. Refer to files by "
+        "file_number and filename, for example: 'For file 1 (bank.csv), I "
+        "would use Posted Date as the date column. For file 2 (revolut.csv), "
+        "I would use Completed Date. Is that right?' Do not ask abstract "
+        "questions like 'which date field' without naming the specific files "
+        "and columns. When returning mapping_ready, tell the user the plan is "
+        "ready and they should proceed to column mapping. Preserve every "
+        "final output column the user requests. If the user asks to keep all "
+        "columns, all fields, or all data, create final columns for all "
+        "available source headers across the uploaded files unless the user "
+        "explicitly says to omit some. Do not collapse a wide spreadsheet "
+        "into Date, Description, and Amount unless the user asked for that "
+        "simplified transaction format. Do not ask for generic confirmation "
+        "without summarizing what is being confirmed. Do not invent source "
+        "columns."
     )
 
 
@@ -354,6 +360,7 @@ def _build_response_contract() -> dict[str, Any]:
             "Use result_operations for whole-spreadsheet edits such as sorting rows after mapping.",
             "For uncertain mappings, make a best guess per file and ask the user to confirm or correct it.",
             "Clarification questions must name the file number, filename, and candidate source columns instead of asking abstractly.",
+            "Use only the supported transform names exactly as written.",
         ],
         "needs_clarification": {
             "required_fields": ["status", "assistant_message", "questions"],
@@ -367,14 +374,20 @@ def _build_response_contract() -> dict[str, Any]:
                 "result_operations",
             ],
         },
-        "supported_transforms": [
-            "copy",
-            "parse_date",
-            "parse_amount",
-            "debit_credit_to_signed_amount",
-            "credit_debit_to_signed_amount",
-            "combine_text",
-            "constant_source_name",
-            "ignore",
-        ],
+        "supported_transforms": _supported_transforms(),
     }
+
+
+def _supported_transforms() -> list[str]:
+    """Return transform names accepted in generated merge plans."""
+
+    return [
+        "copy",
+        "parse_date",
+        "parse_amount",
+        "debit_credit_to_signed_amount",
+        "credit_debit_to_signed_amount",
+        "combine_text",
+        "constant_source_name",
+        "ignore",
+    ]

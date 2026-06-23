@@ -135,6 +135,22 @@ class MergePreviewServiceTests(TestCase):
             ],
         )
 
+    def test_build_merge_preview_accepts_constant_filename_alias(self) -> None:
+        """Existing plans using constant_filename should show the source name."""
+
+        plan = self.create_merge_plan()
+        plan.plan_json["file_mappings"][0]["mappings"][3]["transform"] = (
+            "constant_filename"
+        )
+        plan.save(update_fields=["plan_json"])
+
+        preview = build_merge_preview(plan)
+
+        self.assertEqual(
+            [row["Source"] for row in preview.rows],
+            ["bank.csv", "bank.csv"],
+        )
+
     def test_build_merge_preview_does_not_double_negate_signed_debits(self) -> None:
         """Signed debit values should not receive a second minus sign."""
 

@@ -120,7 +120,7 @@ def _apply_transform(
 
     if transform == "combine_text":
         transformed_value = " ".join(value for value in values if value)
-    elif transform == "constant_source_name":
+    elif transform in {"constant_source_name", "constant_filename"}:
         transformed_value = source_file.original_name
     elif transform == "parse_date":
         transformed_value = values[0] if values else ""

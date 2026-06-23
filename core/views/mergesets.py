@@ -251,14 +251,36 @@ class MergesetColumnMappingView(OwnedMergesetQuerysetMixin, DetailView):
 
         form = MergePlanRevisionForm(request.POST)
         if not form.is_valid():
+            if self._is_async_request():
+                return JsonResponse(
+                    {"errors": form.errors.get_json_data()},
+                    status=400,
+                )
             context = self.get_context_data(object=self.object, revision_form=form)
             return self.render_to_response(context)
 
         try:
             run_merge_plan_revision(self.merge_plan, form.cleaned_data["instruction"])
         except OpenAIPlanningError as error:
+            if self._is_async_request():
+                return JsonResponse({"error": str(error)}, status=500)
             messages.error(request, str(error))
+        else:
+            if self._is_async_request():
+                return JsonResponse(
+                    {
+                        "redirect_url": reverse(
+                            "core:mergeset_column_mapping",
+                            kwargs={"pk": self.object.pk},
+                        )
+                    }
+                )
         return redirect("core:mergeset_column_mapping", pk=self.object.pk)
+
+    def _is_async_request(self) -> bool:
+        """Return whether the browser requested a JSON revision response."""
+
+        return self.request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
 class MergesetDeleteView(LoginRequiredMixin, View):
