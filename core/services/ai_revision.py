@@ -5,7 +5,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-from core.models import MergePlan, MergePlanningMessage
+from core.models import AIUsageRecord, MergePlan, MergePlanningMessage
+from core.services.ai_usage import ensure_user_has_ai_credits, record_ai_usage
 from core.services.ai_planning import (
     DEFAULT_OPENAI_MODEL,
     OpenAIPlanningError,
@@ -66,8 +67,13 @@ def request_merge_plan_revision(
     """Call OpenAI for a revised mapping plan."""
 
     openai_client = client or _build_openai_client()
+    model = os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+    try:
+        ensure_user_has_ai_credits(merge_plan.mergeset.owner)
+    except ValueError as error:
+        raise OpenAIPlanningError(str(error)) from error
     response = openai_client.responses.create(
-        model=os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
+        model=model,
         input=[
             {"role": "system", "content": _build_revision_system_prompt()},
             {"role": "user", "content": json.dumps(_build_revision_payload(merge_plan, instruction))},
@@ -85,6 +91,14 @@ def request_merge_plan_revision(
     _validate_response_payload(response_payload)
     if response_payload["status"] != "mapping_ready":
         raise OpenAIPlanningError("Plan revisions must return a ready mapping plan.")
+    record_ai_usage(
+        user=merge_plan.mergeset.owner,
+        mergeset=merge_plan.mergeset,
+        planning_session=merge_plan.session,
+        request_type=AIUsageRecord.RequestType.REVISION,
+        model=model,
+        response=response,
+    )
     return response_payload
 
 

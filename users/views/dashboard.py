@@ -3,7 +3,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
 
-from core.models import Mergeset
+from core.models import AIUsageRecord, Mergeset
 
 
 class DashboardPageView(LoginRequiredMixin, TemplateView):
@@ -16,4 +16,7 @@ class DashboardPageView(LoginRequiredMixin, TemplateView):
 
         context = super().get_context_data(**kwargs)
         context["mergeset_count"] = Mergeset.objects.filter(owner=self.request.user).count()
+        context["recent_ai_usage"] = AIUsageRecord.objects.filter(
+            user=self.request.user
+        ).select_related("mergeset")[:5]
         return context

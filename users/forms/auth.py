@@ -51,6 +51,7 @@ class CustomUserChangeForm(forms.ModelForm):
             "password",
             "first_name",
             "last_name",
+            "ai_token_credit_balance",
             "is_active",
             "is_staff",
             "is_superuser",

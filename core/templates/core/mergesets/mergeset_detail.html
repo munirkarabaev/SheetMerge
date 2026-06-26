@@ -73,7 +73,7 @@
 
             <div class="ws-sidebar-divider"></div>
 
-            <div class="ws-sidebar-section">
+            <div class="ws-sidebar-section ws-sidebar-section--workflow">
                 <div class="ws-sidebar-heading"><span>Workflow</span></div>
                 <div class="ws-steps">
                     <div class="ws-step ws-step--active">
@@ -118,7 +118,7 @@
                         <span class="ws-badge">Mergeset workspace</span>
                         <h1 class="ws-page-title">{{ mergeset.name }}</h1>
                         <p class="ws-page-meta">
-                            {{ mergeset.description|default:"No description has been added yet." }}
+                            Context: {{ mergeset.description|default:"No context has been added yet." }}
                             &middot;
                             <span class="mono">owner: {{ mergeset.owner.email }}</span>
                         </p>

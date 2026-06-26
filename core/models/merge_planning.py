@@ -105,3 +105,48 @@ class MergePlan(models.Model):
         """Return a readable identifier for admin and shell usage."""
 
         return f"{self.mergeset.name} merge plan"
+
+
+class AIUsageRecord(models.Model):
+    """Audit one completed AI request and its token credit cost."""
+
+    class RequestType(models.TextChoices):
+        """Supported AI request categories."""
+
+        PLANNING = "planning", "Planning"
+        REVISION = "revision", "Revision"
+
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="ai_usage_records",
+    )
+    mergeset = models.ForeignKey(
+        "core.Mergeset",
+        on_delete=models.CASCADE,
+        related_name="ai_usage_records",
+    )
+    planning_session = models.ForeignKey(
+        "core.MergePlanningSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ai_usage_records",
+    )
+    request_type = models.CharField(max_length=16, choices=RequestType.choices)
+    model = models.CharField(max_length=100)
+    input_tokens = models.PositiveIntegerField(default=0)
+    output_tokens = models.PositiveIntegerField(default=0)
+    total_tokens = models.PositiveIntegerField(default=0)
+    credits_used = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        """Model metadata."""
+
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self) -> str:
+        """Return a readable usage label."""
+
+        return f"{self.get_request_type_display()} request used {self.credits_used} credits"

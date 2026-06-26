@@ -6,12 +6,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.models import (
+    AIUsageRecord,
     MergePlan,
     MergePlanningMessage,
     MergePlanningSession,
     Mergeset,
     MergesetFile,
 )
+from core.services.ai_usage import ensure_user_has_ai_credits, record_ai_usage
 
 
 DEFAULT_OPENAI_MODEL = "gpt-5.5"
@@ -111,8 +113,13 @@ def request_merge_planning_response(
 
     planning_context = build_merge_planning_context(session)
     openai_client = client or _build_openai_client()
+    model = os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+    try:
+        ensure_user_has_ai_credits(session.mergeset.owner)
+    except ValueError as error:
+        raise OpenAIPlanningError(str(error)) from error
     response = openai_client.responses.create(
-        model=os.environ.get("OPENAI_MODEL", DEFAULT_OPENAI_MODEL),
+        model=model,
         input=[
             {
                 "role": "system",
@@ -134,6 +141,14 @@ def request_merge_planning_response(
     )
     response_payload = _extract_response_payload(response)
     _validate_response_payload(response_payload)
+    record_ai_usage(
+        user=session.mergeset.owner,
+        mergeset=session.mergeset,
+        planning_session=session,
+        request_type=AIUsageRecord.RequestType.PLANNING,
+        model=model,
+        response=response,
+    )
     return response_payload
 
 

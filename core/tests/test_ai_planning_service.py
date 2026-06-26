@@ -1,9 +1,12 @@
 """Tests for AI planning context construction."""
 
 from django.contrib.auth import get_user_model
+from types import SimpleNamespace
+
 from django.test import TestCase
 
 from core.models import (
+    AIUsageRecord,
     MergePlan,
     MergePlanningMessage,
     MergePlanningSession,
@@ -24,10 +27,15 @@ User = get_user_model()
 class FakeOpenAIResponse:
     """Small stand-in for an OpenAI Responses API object."""
 
-    def __init__(self, output_text: str) -> None:
+    def __init__(self, output_text: str, usage=None) -> None:
         """Store response text for service tests."""
 
         self.output_text = output_text
+        self.usage = usage or SimpleNamespace(
+            input_tokens=120,
+            output_tokens=30,
+            total_tokens=150,
+        )
 
 
 class FakeResponses:
@@ -64,6 +72,7 @@ class MergePlanningContextTests(TestCase):
         self.owner = User.objects.create_user(
             email="owner@example.com",
             password="test-pass-123",
+            ai_token_credit_balance=1000,
         )
         self.mergeset = Mergeset.objects.create(
             owner=self.owner,
@@ -274,6 +283,13 @@ class MergePlanningContextTests(TestCase):
             "merge_planning_response",
         )
         self.assertTrue(create_kwargs["text"]["format"]["strict"])
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.ai_token_credit_balance, 850)
+        usage_record = AIUsageRecord.objects.get()
+        self.assertEqual(usage_record.request_type, AIUsageRecord.RequestType.PLANNING)
+        self.assertEqual(usage_record.input_tokens, 120)
+        self.assertEqual(usage_record.output_tokens, 30)
+        self.assertEqual(usage_record.credits_used, 150)
 
     def test_planning_turn_saves_clarification_message(self) -> None:
         """Clarification responses should append an assistant message."""
@@ -299,6 +315,8 @@ class MergePlanningContextTests(TestCase):
             self.session.status,
             MergePlanningSession.Status.COLLECTING_REQUIREMENTS,
         )
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.ai_token_credit_balance, 850)
 
     def test_planning_turn_creates_merge_plan_when_mapping_ready(self) -> None:
         """Mapping-ready responses should create a reviewable merge plan."""
@@ -322,6 +340,27 @@ class MergePlanningContextTests(TestCase):
         self.assertEqual(result.merge_plan.ai_summary, "I drafted the mapping.")
         self.session.refresh_from_db()
         self.assertEqual(self.session.status, MergePlanningSession.Status.MAPPING_READY)
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.ai_token_credit_balance, 850)
+
+    def test_openai_request_requires_positive_ai_credit_balance(self) -> None:
+        """The service should block requests before spending exhausted credits."""
+
+        self.owner.ai_token_credit_balance = 0
+        self.owner.save(update_fields=["ai_token_credit_balance"])
+        client = FakeOpenAIClient(
+            (
+                '{"status":"needs_clarification","assistant_message":"Which '
+                'columns do you want?","questions":["Which columns do you want?"],'
+                '"final_columns":[],"file_mappings":[],"result_operations":[]}'
+            )
+        )
+
+        with self.assertRaisesMessage(OpenAIPlanningError, "AI token credits are exhausted."):
+            request_merge_planning_response(self.session, client=client)
+
+        self.assertIsNone(client.responses.create_kwargs)
+        self.assertFalse(AIUsageRecord.objects.exists())
 
     def test_openai_request_requires_api_key_without_injected_client(self) -> None:
         """The service should fail clearly when the API key is missing."""

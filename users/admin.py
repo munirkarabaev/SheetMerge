@@ -14,7 +14,7 @@ class SheetMergeUserAdmin(UserAdmin):
     add_form = CustomUserCreationForm
     form = CustomUserChangeForm
     model = User
-    list_display = ("email", "is_staff", "is_active", "created_at")
+    list_display = ("email", "ai_token_credit_balance", "is_staff", "is_active", "created_at")
     list_filter = ("is_staff", "is_active", "is_superuser")
     ordering = ("email",)
     search_fields = ("email", "first_name", "last_name")
@@ -22,6 +22,7 @@ class SheetMergeUserAdmin(UserAdmin):
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal info", {"fields": ("first_name", "last_name")}),
+        ("AI credits", {"fields": ("ai_token_credit_balance",)}),
         (
             "Permissions",
             {

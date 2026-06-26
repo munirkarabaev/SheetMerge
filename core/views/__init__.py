@@ -1,10 +1,10 @@
 """View exports for the core application."""
 
+from core.views.exports import MergesetCsvExportView
 from core.views.home import HomePageView
 from core.views.mergesets import (
     MergesetColumnMappingView,
     MergesetCreateView,
-    MergesetCsvExportView,
     MergesetAISuggestionsView,
     MergesetDeleteView,
     MergesetDetailView,

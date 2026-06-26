@@ -1,14 +1,12 @@
 """Views for authenticated mergeset workflows."""
 
-import csv
 from pathlib import Path
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
-from django.utils.text import slugify
 from django.views import View
 from django.views.generic import CreateView, DetailView, FormView, ListView
 
@@ -283,36 +281,6 @@ class MergesetColumnMappingView(OwnedMergesetQuerysetMixin, DetailView):
         """Return whether the browser requested a JSON revision response."""
 
         return self.request.headers.get("X-Requested-With") == "XMLHttpRequest"
-
-
-class MergesetCsvExportView(LoginRequiredMixin, View):
-    """Download the latest merge plan result as a CSV file."""
-
-    http_method_names = ["get"]
-
-    def get(self, request, *args, **kwargs):
-        """Return a CSV generated from the latest reviewable merge plan."""
-
-        mergeset = get_object_or_404(
-            Mergeset,
-            pk=kwargs["pk"],
-            owner=request.user,
-        )
-        merge_plan = mergeset.merge_plans.first()
-        if merge_plan is None:
-            messages.error(request, "Generate an AI mapping plan before exporting.")
-            return redirect("core:mergeset_ai_suggestions", pk=mergeset.pk)
-
-        preview = build_merge_preview(merge_plan)
-        filename = f"{slugify(mergeset.name) or 'sheetmerge-export'}.csv"
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-        writer = csv.writer(response)
-        writer.writerow(preview.columns)
-        for row in preview.rows:
-            writer.writerow([row.get(column, "") for column in preview.columns])
-        return response
 
 
 class MergesetDeleteView(LoginRequiredMixin, View):

@@ -46,7 +46,7 @@
 
     <div class="ws-body">
         <aside class="ws-sidebar">
-            <div class="ws-sidebar-section">
+            <div class="ws-sidebar-section ws-sidebar-section--workflow">
                 <div class="ws-sidebar-heading"><span>Workflow</span></div>
                 <div class="ws-steps">
                     <div class="ws-step">
@@ -87,8 +87,16 @@
                 <header class="ws-page-header">
                     <span class="ws-badge">Column mapping</span>
                     <h1 class="ws-page-title">Review the AI mapping plan</h1>
-                    <p class="ws-page-meta">{{ merge_plan.ai_summary }}</p>
                 </header>
+
+                <section class="ws-card iteration-card" aria-labelledby="review-state-heading">
+                    <div class="ws-card-header">
+                        <h2 class="ws-card-title" id="review-state-heading">Review state</h2>
+                    </div>
+                    <div class="ws-card-body iteration-card-body">
+                        <p>{{ merge_plan.ai_summary }}</p>
+                    </div>
+                </section>
 
                 <section class="ws-card" aria-labelledby="final-columns-heading">
                     <div class="ws-card-header">
@@ -109,8 +117,8 @@
 
                 {% for file_mapping in file_mappings %}
                     <section class="ws-card" aria-labelledby="mapping-file-{{ forloop.counter }}">
-                        <div class="ws-card-header ws-card-header--row">
-                            <div>
+                        <div class="ws-card-header ws-card-header--row mapping-file-header">
+                            <div class="mapping-file-heading">
                                 <p class="ws-eyebrow">Source file</p>
                                 <h2 class="ws-card-title" id="mapping-file-{{ forloop.counter }}">
                                     {{ file_mapping.filename }}
@@ -119,8 +127,26 @@
                             <span class="ws-count-badge">
                                 {{ file_mapping.mappings|length }} mapping{{ file_mapping.mappings|length|pluralize }}
                             </span>
+                            {% if file_mapping.mappings or file_mapping.ignored_columns %}
+                                <button
+                                    type="button"
+                                    class="preview-toggle"
+                                    data-preview-toggle
+                                    data-toggle-show="Show mappings"
+                                    data-toggle-hide="Hide mappings"
+                                    aria-expanded="false"
+                                    aria-controls="file-mapping-{{ forloop.counter }}"
+                                >
+                                    Show mappings
+                                </button>
+                            {% endif %}
                         </div>
-                        <div class="mapping-list">
+                        <div
+                            class="mapping-collapse"
+                            id="file-mapping-{{ forloop.counter }}"
+                            hidden
+                        >
+                            <div class="mapping-list">
                             {% for mapping in file_mapping.mappings %}
                                 <div class="mapping-row">
                                     <div>
@@ -134,13 +160,14 @@
                             {% empty %}
                                 <p class="ws-empty">No mapped columns for this file.</p>
                             {% endfor %}
-                        </div>
-                        {% if file_mapping.ignored_columns %}
-                            <div class="mapping-ignored">
-                                <span>Ignored</span>
-                                <p>{{ file_mapping.ignored_columns|join:", " }}</p>
                             </div>
-                        {% endif %}
+                            {% if file_mapping.ignored_columns %}
+                                <div class="mapping-ignored">
+                                    <span>Ignored</span>
+                                    <p>{{ file_mapping.ignored_columns|join:", " }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
                     </section>
                 {% empty %}
                     <p class="ws-empty">No file mappings were returned in this plan.</p>
@@ -160,6 +187,8 @@
                                 type="button"
                                 class="preview-toggle"
                                 data-preview-toggle
+                                data-toggle-show="Show preview"
+                                data-toggle-hide="Hide preview"
                                 aria-expanded="false"
                                 aria-controls="spreadsheet-preview"
                             >

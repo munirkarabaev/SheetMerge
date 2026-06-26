@@ -64,6 +64,19 @@ class MergesetViewTests(TestCase):
         mergeset = Mergeset.objects.get(name="Created from form")
         self.assertRedirects(response, reverse("core:mergeset_detail", kwargs={"pk": mergeset.pk}))
         self.assertEqual(mergeset.owner, self.owner)
+        self.assertEqual(mergeset.description, "Testing owner assignment")
+
+    def test_mergeset_create_page_labels_description_as_context(self) -> None:
+        """The setup form should explain that context feeds AI planning."""
+
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("core:mergeset_create"))
+
+        self.assertContains(response, "Configure merge job")
+        self.assertContains(response, "Context")
+        self.assertContains(response, "sent to the AI")
+        self.assertNotContains(response, ">Description</label>")
 
     def test_mergeset_detail_is_limited_to_owner(self) -> None:
         """Non-owners should not be able to open another user's mergeset."""

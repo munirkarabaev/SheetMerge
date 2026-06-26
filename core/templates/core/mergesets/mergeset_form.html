@@ -3,11 +3,16 @@
 {% block title %}Create Mergeset | SheetMerge{% endblock title %}
 
 {% block content %}
-<section class="dashboard-shell">
-    <article class="dashboard-card card">
-        <span class="section-badge">Create mergeset</span>
-        <h1>Start a new merge job</h1>
-        <p>This is the minimum mergeset setup flow for now.</p>
+<section class="merge-setup-shell">
+    <article class="merge-setup-card card">
+        <div class="merge-setup-header">
+            <span class="section-badge merge-setup-badge">New job</span>
+            <h1>Configure merge job</h1>
+            <p>
+                Define the workspace and give the AI persistent context before
+                uploading source files.
+            </p>
+        </div>
 
         <form class="mergeset-form" method="post">
             {% csrf_token %}
@@ -16,7 +21,7 @@
             {% endif %}
 
             <div class="field">
-                <label for="{{ form.name.id_for_label }}">Mergeset name</label>
+                <label for="{{ form.name.id_for_label }}">Job name</label>
                 {{ form.name }}
                 {% if form.name.errors %}
                     <p class="field-error">{{ form.name.errors|striptags }}</p>
@@ -24,15 +29,18 @@
             </div>
 
             <div class="field">
-                <label for="{{ form.description.id_for_label }}">Description</label>
+                <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
                 {{ form.description }}
+                {% if form.description.help_text %}
+                    <p class="merge-setup-help">{{ form.description.help_text }}</p>
+                {% endif %}
                 {% if form.description.errors %}
                     <p class="field-error">{{ form.description.errors|striptags }}</p>
                 {% endif %}
             </div>
 
             <div class="mergeset-form__actions">
-                <button class="btn-primary" type="submit">Create mergeset</button>
+                <button class="btn-primary" type="submit">Create job</button>
                 <a class="button button--secondary" href="{% url 'core:mergeset_list' %}">Cancel</a>
             </div>
         </form>

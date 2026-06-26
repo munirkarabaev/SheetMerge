@@ -13,6 +13,13 @@
         <p>
             Mergesets owned by your account: <strong>{{ mergeset_count }}</strong>
         </p>
+        <section class="ai-credit-summary" aria-label="AI token credits">
+            <div>
+                <span class="feature-card__eyebrow">AI token credits</span>
+                <strong>{{ user.ai_token_credit_balance }}</strong>
+            </div>
+            <p>One credit equals one token used by AI requests.</p>
+        </section>
         <p>
             <a class="button button--primary" href="{% url 'core:mergeset_list' %}">Open mergesets</a>
         </p>
@@ -35,5 +42,32 @@
             <p>Prepare the account layer that the parser and matching workflow will build on next.</p>
         </article>
     </section>
+
+    <article class="dashboard-card card">
+        <span class="section-badge">AI usage</span>
+        <h2>Recent token spend</h2>
+        {% if recent_ai_usage %}
+            <table class="usage-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Request</th>
+                        <th scope="col">Mergeset</th>
+                        <th scope="col">Tokens</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usage in recent_ai_usage %}
+                        <tr>
+                            <td>{{ usage.get_request_type_display }}</td>
+                            <td>{{ usage.mergeset.name }}</td>
+                            <td>{{ usage.credits_used }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No AI token usage yet.</p>
+        {% endif %}
+    </article>
 </section>
 {% endblock content %}

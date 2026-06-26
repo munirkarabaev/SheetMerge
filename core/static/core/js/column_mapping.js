@@ -8,8 +8,10 @@ document.querySelectorAll("[data-preview-toggle]").forEach((button) => {
 
     button.addEventListener("click", () => {
         const isExpanded = button.getAttribute("aria-expanded") === "true";
+        const showText = button.dataset.toggleShow || "Show preview";
+        const hideText = button.dataset.toggleHide || "Hide preview";
         button.setAttribute("aria-expanded", String(!isExpanded));
-        button.textContent = isExpanded ? "Show preview" : "Hide preview";
+        button.textContent = isExpanded ? showText : hideText;
         preview.hidden = isExpanded;
     });
 });

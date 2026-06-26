@@ -3,6 +3,7 @@
 from django.contrib import admin
 
 from core.models import (
+    AIUsageRecord,
     MergePlan,
     MergePlanningMessage,
     MergePlanningSession,
@@ -52,3 +53,31 @@ class MergePlanAdmin(admin.ModelAdmin):
     list_display = ("mergeset", "session", "status", "created_at", "updated_at")
     list_filter = ("status",)
     search_fields = ("mergeset__name", "mergeset__owner__email", "ai_summary")
+
+
+@admin.register(AIUsageRecord)
+class AIUsageRecordAdmin(admin.ModelAdmin):
+    """Admin configuration for AI token credit usage."""
+
+    list_display = (
+        "user",
+        "mergeset",
+        "request_type",
+        "model",
+        "credits_used",
+        "created_at",
+    )
+    list_filter = ("request_type", "model")
+    search_fields = ("user__email", "mergeset__name")
+    readonly_fields = (
+        "user",
+        "mergeset",
+        "planning_session",
+        "request_type",
+        "model",
+        "input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "credits_used",
+        "created_at",
+    )

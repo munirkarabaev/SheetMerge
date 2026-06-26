@@ -5,6 +5,8 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from core.models import AIUsageRecord, Mergeset
+
 
 User = get_user_model()
 
@@ -46,6 +48,18 @@ class AuthenticationViewTests(TestCase):
         user = User.objects.create_user(
             email="owner@example.com",
             password="test-pass-123",
+            ai_token_credit_balance=42000,
+        )
+        mergeset = Mergeset.objects.create(owner=user, name="Bank exports")
+        AIUsageRecord.objects.create(
+            user=user,
+            mergeset=mergeset,
+            request_type=AIUsageRecord.RequestType.PLANNING,
+            model="gpt-5.5",
+            input_tokens=300,
+            output_tokens=100,
+            total_tokens=400,
+            credits_used=400,
         )
         self.client.force_login(user)
 
@@ -54,6 +68,11 @@ class AuthenticationViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Welcome back")
         self.assertContains(response, "Mergesets owned by your account")
+        self.assertContains(response, "AI token credits")
+        self.assertContains(response, "42000")
+        self.assertContains(response, "Recent token spend")
+        self.assertContains(response, "Bank exports")
+        self.assertContains(response, "400")
 
     def test_signup_post_creates_user(self) -> None:
         """Submitting the signup form should create a new user."""

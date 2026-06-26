@@ -89,15 +89,15 @@ a {
     border-radius: var(--radius-md);
     background: linear-gradient(135deg, var(--color-primary), var(--color-accent-strong));
     color: #ffffff;
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-weight: 800;
 }
 
 .brand__name {
     font-size: 1.05rem;
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
 }
 
 .topnav,
@@ -126,6 +126,8 @@ a {
     padding: 0.55rem 0.8rem;
     border-radius: var(--radius-sm);
     color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
     font-weight: 500;
 }
 
@@ -194,7 +196,8 @@ a {
     align-items: center;
     justify-content: center;
     padding: 0.7rem 1rem;
-    font: inherit;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
     cursor: pointer;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);

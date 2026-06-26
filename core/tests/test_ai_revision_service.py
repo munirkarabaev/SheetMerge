@@ -1,10 +1,18 @@
 """Tests for AI-assisted merge plan revisions."""
 
+from types import SimpleNamespace
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from core.models import MergePlan, MergePlanningMessage, MergePlanningSession, Mergeset
-from core.services import run_merge_plan_revision
+from core.models import (
+    AIUsageRecord,
+    MergePlan,
+    MergePlanningMessage,
+    MergePlanningSession,
+    Mergeset,
+)
+from core.services import OpenAIPlanningError, run_merge_plan_revision
 
 
 User = get_user_model()
@@ -17,6 +25,11 @@ class FakeOpenAIResponse:
         """Store response text for service tests."""
 
         self.output_text = output_text
+        self.usage = SimpleNamespace(
+            input_tokens=200,
+            output_tokens=75,
+            total_tokens=275,
+        )
 
 
 class FakeResponses:
@@ -53,6 +66,7 @@ class MergePlanRevisionServiceTests(TestCase):
         self.owner = User.objects.create_user(
             email="owner@example.com",
             password="test-pass-123",
+            ai_token_credit_balance=1000,
         )
         self.mergeset = Mergeset.objects.create(
             owner=self.owner,
@@ -102,6 +116,11 @@ class MergePlanRevisionServiceTests(TestCase):
             list(self.session.messages.values_list("role", flat=True)),
             [MergePlanningMessage.Role.USER, MergePlanningMessage.Role.ASSISTANT],
         )
+        self.owner.refresh_from_db()
+        self.assertEqual(self.owner.ai_token_credit_balance, 725)
+        usage_record = AIUsageRecord.objects.get()
+        self.assertEqual(usage_record.request_type, AIUsageRecord.RequestType.REVISION)
+        self.assertEqual(usage_record.credits_used, 275)
 
     def test_revision_request_includes_instruction_and_current_plan(self) -> None:
         """The revision request should include enough context for OpenAI."""
@@ -120,3 +139,22 @@ class MergePlanRevisionServiceTests(TestCase):
         self.assertIn("Keep this mapping.", request_content)
         self.assertIn("current_plan", request_content)
         self.assertIn("result_operations", request_content)
+
+    def test_revision_requires_positive_ai_credit_balance(self) -> None:
+        """The revision request should not run when credits are exhausted."""
+
+        self.owner.ai_token_credit_balance = 0
+        self.owner.save(update_fields=["ai_token_credit_balance"])
+        client = FakeOpenAIClient(
+            (
+                '{"status":"mapping_ready","assistant_message":"No changes needed.",'
+                '"questions":[],"final_columns":[{"name":"Date","type":"date"}],'
+                '"file_mappings":[],"result_operations":[]}'
+            )
+        )
+
+        with self.assertRaisesMessage(OpenAIPlanningError, "AI token credits are exhausted."):
+            run_merge_plan_revision(self.merge_plan, "Keep this mapping.", client=client)
+
+        self.assertIsNone(client.responses.create_kwargs)
+        self.assertFalse(AIUsageRecord.objects.exists())
