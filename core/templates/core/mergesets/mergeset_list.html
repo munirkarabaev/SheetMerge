@@ -3,14 +3,14 @@
 {% block title %}Mergesets | SheetMerge{% endblock title %}
 
 {% block content %}
-<section class="dashboard-shell">
+<section class="workspace-page dashboard-shell">
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert--{{ message.tags }}">{{ message }}</div>
         {% endfor %}
     {% endif %}
 
-    <article class="dashboard-card card">
+    <article class="workspace-card workspace-card--hero dashboard-card card">
         <span class="section-badge">Mergesets</span>
         <h1>Your merge jobs</h1>
         <p>Mergesets are private to your account and hold the files and review state for one merge job.</p>
@@ -20,20 +20,25 @@
     </article>
 
     {% if mergesets %}
-        <section class="dashboard-grid" aria-label="Mergeset list">
+        <section class="workspace-grid dashboard-grid" aria-label="Mergeset list">
             {% for mergeset in mergesets %}
-                <article class="card">
-                    <p class="feature-card__eyebrow">Mergeset</p>
-                    <h2>{{ mergeset.name }}</h2>
-                    <p>{{ mergeset.description|default:"No context yet." }}</p>
-                    <p>
+                <article class="workspace-card merge-job-card card">
+                    <header class="merge-job-card__header">
+                        <span class="feature-card__eyebrow">Mergeset</span>
+                        <h2>{{ mergeset.name }}</h2>
+                    </header>
+                    <div class="merge-job-card__body">
+                        <p class="merge-job-card__label">Description</p>
+                        <p class="merge-job-card__description">{{ mergeset.description|default:"No context yet." }}</p>
+                    </div>
+                    <p class="merge-job-card__actions">
                         <a class="button button--secondary" href="{% url 'core:mergeset_detail' mergeset.pk %}">Open</a>
                     </p>
                 </article>
             {% endfor %}
         </section>
     {% else %}
-        <article class="dashboard-card card">
+        <article class="workspace-card dashboard-card card">
             <p class="feature-card__eyebrow">Empty state</p>
             <h2>No mergesets yet</h2>
             <p>Create your first mergeset to start testing the authenticated workflow.</p>

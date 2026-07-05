@@ -1,6 +1,7 @@
 @media (max-width: 1180px) {
     .hero,
     .feature-grid,
+    .workspace-grid,
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
@@ -34,9 +35,15 @@
     .feature-card,
     .preview-card,
     .hero__panel,
+    .workspace-card,
     .dashboard-card,
     .dashboard-grid article {
         padding: var(--space-5);
+    }
+
+    .workspace-card--hero h1,
+    .dashboard-card--hero h1 {
+        font-size: 2.25rem;
     }
 }
 

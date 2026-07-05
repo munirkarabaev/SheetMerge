@@ -3,14 +3,11 @@
 {% block title %}Dashboard | SheetMerge{% endblock title %}
 
 {% block content %}
-<section class="dashboard-shell">
-    <article class="dashboard-card card">
+<section class="workspace-page dashboard-shell">
+    <article class="workspace-card workspace-card--hero dashboard-card dashboard-card--hero card">
         <span class="section-badge">Workspace</span>
-        <h1>Welcome back, {{ user.get_full_name }}.</h1>
-        <p>
-            Your account layer is in place. Next up are mergesets, uploads, and the transaction parsing workflow.
-        </p>
-        <p>
+        <h1>Dashboard</h1>
+        <p class="workspace-stat dashboard-stat">
             Mergesets owned by your account: <strong>{{ mergeset_count }}</strong>
         </p>
         <section class="ai-credit-summary" aria-label="AI token credits">
@@ -18,32 +15,31 @@
                 <span class="feature-card__eyebrow">AI token credits</span>
                 <strong>{{ user.ai_token_credit_balance }}</strong>
             </div>
-            <p>One credit equals one token used by AI requests.</p>
         </section>
         <p>
             <a class="button button--primary" href="{% url 'core:mergeset_list' %}">Open mergesets</a>
         </p>
     </article>
 
-    <section class="dashboard-grid" aria-label="Workspace roadmap">
-        <article class="card">
+    <section class="workspace-grid dashboard-grid" aria-label="Workspace roadmap">
+        <article class="workspace-card card">
             <p class="feature-card__eyebrow">Mergesets</p>
             <h2>Create a merge job</h2>
             <p>Start a mergeset that will hold uploads, AI suggestions, and review state.</p>
         </article>
-        <article class="card">
+        <article class="workspace-card card">
             <p class="feature-card__eyebrow">Uploads</p>
             <h2>Connect source files</h2>
             <p>Bring in CSV and XLSX exports from banks, cards, and accounting tools.</p>
         </article>
-        <article class="card">
+        <article class="workspace-card card">
             <p class="feature-card__eyebrow">Review</p>
             <h2>Normalize transactions</h2>
             <p>Prepare the account layer that the parser and matching workflow will build on next.</p>
         </article>
     </section>
 
-    <article class="dashboard-card card">
+    <article class="workspace-card dashboard-card card">
         <span class="section-badge">AI usage</span>
         <h2>Recent token spend</h2>
         {% if recent_ai_usage %}

@@ -47,6 +47,33 @@ class MergesetViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Owner mergeset")
         self.assertNotContains(response, "Other mergeset")
+        self.assertContains(response, "workspace-page")
+        self.assertContains(response, "workspace-card")
+        self.assertContains(response, "workspace-grid")
+        self.assertContains(response, "merge-job-card")
+        self.assertContains(response, "Description")
+
+    def test_billing_page_uses_workspace_layout(self) -> None:
+        """Billing should use shared workspace card styling."""
+
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("core:billing"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "workspace-page")
+        self.assertContains(response, "workspace-card workspace-card--hero")
+
+    def test_support_page_uses_workspace_layout(self) -> None:
+        """Support should use shared workspace card styling."""
+
+        self.client.force_login(self.owner)
+
+        response = self.client.get(reverse("core:support"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "workspace-page")
+        self.assertContains(response, "workspace-card workspace-card--hero")
 
     def test_mergeset_create_assigns_owner_to_request_user(self) -> None:
         """Created mergesets should automatically belong to the signed-in user."""
