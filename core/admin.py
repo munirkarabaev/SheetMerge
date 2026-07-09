@@ -4,12 +4,30 @@ from django.contrib import admin
 
 from core.models import (
     AIUsageRecord,
+    ExchangeRate,
     MergePlan,
     MergePlanningMessage,
     MergePlanningSession,
     Mergeset,
     MergesetFile,
 )
+
+
+@admin.register(ExchangeRate)
+class ExchangeRateAdmin(admin.ModelAdmin):
+    """Admin configuration for cached exchange rates."""
+
+    list_display = (
+        "base_currency",
+        "quote_currency",
+        "year",
+        "month",
+        "average_rate",
+        "provider",
+        "fetched_at",
+    )
+    list_filter = ("provider", "base_currency", "quote_currency", "year", "month")
+    search_fields = ("base_currency", "quote_currency", "provider")
 
 
 @admin.register(Mergeset)

@@ -196,6 +196,9 @@ class MergePlanningContextTests(TestCase):
             "debit_credit_to_signed_amount",
             response_contract["supported_transforms"],
         )
+        self.assertIn("convert_currency", response_contract["supported_transforms"])
+        self.assertIn("output_currency", response_contract["mapping_ready"]["required_fields"])
+        self.assertIn("filename hints", response_contract["currency_detection"]["evidence_examples"])
 
     def test_context_tells_ai_to_accept_user_confirmation(self) -> None:
         """Prompt rules should prevent repeated confirmation loops."""
@@ -259,6 +262,8 @@ class MergePlanningContextTests(TestCase):
         self.assertIn("Preserve every final column", workflow_rules[8])
         self.assertIn("include all uploaded source headers", workflow_rules[9])
         self.assertIn("Date, Description, Amount", workflow_rules[10])
+        self.assertIn("source currencies", context.system_prompt)
+        self.assertIn("output_currency", context.system_prompt)
 
     def test_openai_request_uses_structured_output_schema(self) -> None:
         """The OpenAI request should ask for strict structured JSON."""
@@ -267,6 +272,8 @@ class MergePlanningContextTests(TestCase):
             (
                 '{"status":"needs_clarification","assistant_message":"Which '
                 'columns do you want?","questions":["Which columns do you want?"],'
+                '"output_currency":null,"currency_conversion":{"required":false,'
+                '"target_currency":null,"rate_basis":"not_applicable","notes":""},'
                 '"final_columns":[],"file_mappings":[],"result_operations":[]}'
             )
         )
@@ -298,6 +305,8 @@ class MergePlanningContextTests(TestCase):
             (
                 '{"status":"needs_clarification","assistant_message":"Should '
                 'refunds be positive?","questions":["Should refunds be positive?"],'
+                '"output_currency":null,"currency_conversion":{"required":false,'
+                '"target_currency":null,"rate_basis":"not_applicable","notes":""},'
                 '"final_columns":[],"file_mappings":[],"result_operations":[]}'
             )
         )
@@ -324,9 +333,14 @@ class MergePlanningContextTests(TestCase):
         client = FakeOpenAIClient(
             (
                 '{"status":"mapping_ready","assistant_message":"I drafted the '
-                'mapping.","questions":[],"final_columns":[{"name":"Date",'
+                'mapping.","questions":[],"output_currency":"GBP",'
+                '"currency_conversion":{"required":true,"target_currency":"GBP",'
+                '"rate_basis":"monthly_average","notes":"Convert USD to GBP."},'
+                '"final_columns":[{"name":"Date",'
                 '"type":"date"}],"file_mappings":[{"file_id":1,"filename":'
-                '"bank.csv","mappings":[{"target_column":"Date","source_columns":'
+                '"bank.csv","detected_currency":{"currency":"USD","confidence":"high",'
+                '"evidence":["Currency column contains USD"],"ambiguity":""},'
+                '"mappings":[{"target_column":"Date","source_columns":'
                 '["Transaction Date"],"transform":"parse_date","notes":""}],'
                 '"ignored_columns":["Balance"]}],"result_operations":[]}'
             )
@@ -338,6 +352,8 @@ class MergePlanningContextTests(TestCase):
         self.assertEqual(MergePlan.objects.count(), 1)
         self.assertEqual(result.merge_plan.status, MergePlan.Status.NEEDS_REVIEW)
         self.assertEqual(result.merge_plan.ai_summary, "I drafted the mapping.")
+        self.assertEqual(result.merge_plan.plan_json["output_currency"], "GBP")
+        self.assertTrue(result.merge_plan.plan_json["currency_conversion"]["required"])
         self.session.refresh_from_db()
         self.assertEqual(self.session.status, MergePlanningSession.Status.MAPPING_READY)
         self.owner.refresh_from_db()
@@ -352,6 +368,8 @@ class MergePlanningContextTests(TestCase):
             (
                 '{"status":"needs_clarification","assistant_message":"Which '
                 'columns do you want?","questions":["Which columns do you want?"],'
+                '"output_currency":null,"currency_conversion":{"required":false,'
+                '"target_currency":null,"rate_basis":"not_applicable","notes":""},'
                 '"final_columns":[],"file_mappings":[],"result_operations":[]}'
             )
         )

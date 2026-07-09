@@ -249,15 +249,68 @@ CSV decoding now accepts more than strict UTF-8:
 
 This means common files with characters like `Café` can be parsed and previewed.
 
+### Currency Planning Contract
+
+The AI planning response contract now includes currency intent, but conversion
+is not implemented yet.
+
+Added:
+
+- `output_currency`
+- `currency_conversion`
+- Per-file `detected_currency`
+- Future `convert_currency` transform
+
+The prompt tells the AI to detect source currencies from currency columns,
+headers, symbols, filenames, and sample rows. If currency conversion is needed
+but the source currency is ambiguous, the AI should ask a concrete question
+naming the file and evidence. Exchange rates must not be invented by AI; future
+work should use a deterministic exchange-rate service.
+
+### Exchange Rate Cache
+
+Added deterministic exchange-rate foundations:
+
+- Model: `ExchangeRate`
+- Service: `core/services/exchange_rates.py`
+- Migration: `core/migrations/0009_exchangerate.py`
+
+The service supports:
+
+- Same-currency rates as `1`
+- Cached monthly average lookup
+- Provider-based fetch and cache-on-miss
+- Default Frankfurter provider for monthly grouped historical rates
+- Validation for three-letter currency codes, valid months, and positive rates
+- Clear `ExchangeRateError` failures for missing or invalid rate data
+
+The default provider is Frankfurter's public v2 API. Tests use fake providers and
+fake HTTP responses, so the test suite does not depend on live network access.
+Preview and export now apply `convert_currency` through the deterministic preview
+layer. If conversion cannot be completed for a row, SheetMerge keeps the
+original amount and records a preview warning instead of blocking the whole
+result.
+
+Implemented conversion behavior:
+
+- Uses the row month from a parsed date mapping.
+- Uses per-file `detected_currency` and plan-level target currency.
+- Uses cached/fetched monthly average rates via `get_monthly_average_rate`.
+- Formats converted values to two decimal places.
+- Keeps the original amount and warns when the amount, source/target currency,
+  row date, or exchange-rate lookup is unavailable.
+- Shows conversion intent, detected currencies, and warnings on the column
+  mapping review page.
+
 ## Important Next Work
 
 Date normalization and chronological sorting now exist in the deterministic
 preview layer. The next practical work is to continue the end-to-end workflow:
 
 1. Add final approval/finalization for a reviewed mapping.
-2. Add export/download for the merged result.
-3. Consider making the user's preferred date display format configurable later.
-4. Improve amount normalization beyond debit/credit signed amount transforms.
+2. Improve amount normalization beyond debit/credit signed amount transforms.
+3. Consider richer currency conversion provenance in exports, such as rate and
+   provider columns or downloadable warning summaries.
 
 ## Known Gaps
 
@@ -281,17 +334,16 @@ Files close to the 400-line policy:
 
 - `core/tests/test_ai_suggestions.py` is 398 lines. Do not add more tests there;
   create a new test file.
-- `core/services/ai_planning.py` is 380 lines. If adding more planning behavior,
-  consider splitting schema or prompt helpers into another module.
+- `core/tests/test_ai_planning_service.py` is 398 lines. Do not add more tests
+  there; create a new focused test file or split existing tests.
 - `core/views/mergesets.py` is 356 lines. Keep future view growth cautious.
-- `core/tests/test_ai_planning_service.py` is 341 lines.
 - `core/tests/test_mergeset_file_uploads.py` is 336 lines.
 
 ## Test Status
 
 The full Django test suite was run multiple times during the AI integration work.
-The latest successful full-suite result after the amount sign handling fix was
-99 tests passing. The focused merge preview service tests passed with 11 tests.
+The latest successful full-suite result after the Frankfurter provider was
+122 tests passing.
 
 If only this context file changed, application tests are not expected to be
 affected. For implementation changes, run:

@@ -13,6 +13,10 @@ from core.models import (
     Mergeset,
     MergesetFile,
 )
+from core.services.ai_contract import (
+    build_openai_response_schema,
+    build_response_contract,
+)
 from core.services.ai_usage import ensure_user_has_ai_credits, record_ai_usage
 
 
@@ -64,7 +68,7 @@ def build_merge_planning_context(session: MergePlanningSession) -> PlanningConte
                 }
                 for message in session.messages.all()
             ],
-            "response_contract": _build_response_contract(),
+            "response_contract": build_response_contract(),
         },
     )
 
@@ -135,7 +139,7 @@ def request_merge_planning_response(
                 "type": "json_schema",
                 "name": "merge_planning_response",
                 "strict": True,
-                "schema": _build_openai_response_schema(),
+                "schema": build_openai_response_schema(),
             }
         },
     )
@@ -194,103 +198,16 @@ def _validate_response_payload(payload: dict[str, Any]) -> None:
         raise OpenAIPlanningError("OpenAI response is missing an assistant message.")
     if not isinstance(payload.get("questions"), list):
         raise OpenAIPlanningError("OpenAI response questions must be a list.")
+    if "output_currency" not in payload:
+        raise OpenAIPlanningError("OpenAI response is missing output currency.")
+    if not isinstance(payload.get("currency_conversion"), dict):
+        raise OpenAIPlanningError("OpenAI response currency conversion must be an object.")
     if not isinstance(payload.get("final_columns"), list):
         raise OpenAIPlanningError("OpenAI response final columns must be a list.")
     if not isinstance(payload.get("file_mappings"), list):
         raise OpenAIPlanningError("OpenAI response file mappings must be a list.")
     if not isinstance(payload.get("result_operations", []), list):
         raise OpenAIPlanningError("OpenAI response result operations must be a list.")
-
-
-def _build_openai_response_schema() -> dict[str, Any]:
-    """Return the strict JSON schema requested from OpenAI."""
-
-    return {
-        "type": "object",
-        "additionalProperties": False,
-        "required": [
-            "status",
-            "assistant_message",
-            "questions",
-            "final_columns",
-            "file_mappings",
-            "result_operations",
-        ],
-        "properties": {
-            "status": {
-                "type": "string",
-                "enum": ["needs_clarification", "mapping_ready"],
-            },
-            "assistant_message": {"type": "string"},
-            "questions": {"type": "array", "items": {"type": "string"}},
-            "final_columns": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["name", "type"],
-                    "properties": {
-                        "name": {"type": "string"},
-                        "type": {"type": "string"},
-                    },
-                },
-            },
-            "file_mappings": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["file_id", "filename", "mappings", "ignored_columns"],
-                    "properties": {
-                        "file_id": {"type": "integer"},
-                        "filename": {"type": "string"},
-                        "mappings": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "additionalProperties": False,
-                                "required": [
-                                    "target_column",
-                                    "source_columns",
-                                    "transform",
-                                    "notes",
-                                ],
-                                "properties": {
-                                    "target_column": {"type": "string"},
-                                    "source_columns": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                    },
-                                    "transform": {
-                                        "type": "string",
-                                        "enum": _supported_transforms(),
-                                    },
-                                    "notes": {"type": "string"},
-                                },
-                            },
-                        },
-                        "ignored_columns": {"type": "array", "items": {"type": "string"}},
-                    },
-                },
-            },
-            "result_operations": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["type", "column", "direction"],
-                    "properties": {
-                        "type": {"type": "string", "enum": ["sort"]},
-                        "column": {"type": "string"},
-                        "direction": {
-                            "type": "string",
-                            "enum": ["ascending", "descending"],
-                        },
-                    },
-                },
-            },
-        },
-    }
 
 
 def _build_system_prompt() -> str:
@@ -327,7 +244,13 @@ def _build_system_prompt() -> str:
         "into Date, Description, and Amount unless the user asked for that "
         "simplified transaction format. Do not ask for generic confirmation "
         "without summarizing what is being confirmed. Do not invent source "
-        "columns."
+        "columns. Detect source currencies from currency columns, currency "
+        "codes in headers, amount symbols, filenames, and sample rows. If the "
+        "user wants one output currency, set output_currency and "
+        "currency_conversion. If a source currency is ambiguous and currency "
+        "conversion depends on it, ask a concrete question naming the file, "
+        "the detected evidence, and the possible currencies. Do not invent "
+        "exchange rates; only plan the conversion intent."
     )
 
 
@@ -354,55 +277,3 @@ def _build_source_file_payload(index: int, source_file: MergesetFile) -> dict[st
         "sample_rows": source_file.sample_rows,
     }
 
-
-def _build_response_contract() -> dict[str, Any]:
-    """Describe the response shapes the AI integration should request."""
-
-    return {
-        "statuses": ["needs_clarification", "mapping_ready"],
-        "workflow_rules": [
-            "Return needs_clarification only when missing information blocks mapping.",
-            "Return mapping_ready when final columns and mapping rules are clear.",
-            "Treat confirmations such as yes, confirmed, I confirm, correct, or go ahead as approval of your previous interpretation.",
-            "Do not ask the same clarification question twice after the user has answered it.",
-            "Every clarification message must name the exact choice needed and why it affects the mapping.",
-            "Assistant messages should sound natural and specific, not robotic or generic.",
-            "If clarification is about a column, name the source columns or mapping options being compared.",
-            "When status is mapping_ready, assistant_message must tell the user to proceed to column mapping.",
-            "Preserve every final column requested by the user; do not silently drop requested columns.",
-            "If the user asks to keep all columns, include all uploaded source headers as final columns unless they explicitly exclude some.",
-            "Do not default to a Date, Description, Amount transaction layout unless the user requested that simplified layout.",
-            "Use result_operations for whole-spreadsheet edits such as sorting rows after mapping.",
-            "For uncertain mappings, make a best guess per file and ask the user to confirm or correct it.",
-            "Clarification questions must name the file number, filename, and candidate source columns instead of asking abstractly.",
-            "Use only the supported transform names exactly as written.",
-        ],
-        "needs_clarification": {
-            "required_fields": ["status", "assistant_message", "questions"],
-        },
-        "mapping_ready": {
-            "required_fields": [
-                "status",
-                "assistant_message",
-                "final_columns",
-                "file_mappings",
-                "result_operations",
-            ],
-        },
-        "supported_transforms": _supported_transforms(),
-    }
-
-
-def _supported_transforms() -> list[str]:
-    """Return transform names accepted in generated merge plans."""
-
-    return [
-        "copy",
-        "parse_date",
-        "parse_amount",
-        "debit_credit_to_signed_amount",
-        "credit_debit_to_signed_amount",
-        "combine_text",
-        "constant_source_name",
-        "ignore",
-    ]

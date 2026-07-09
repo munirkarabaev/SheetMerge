@@ -115,6 +115,25 @@
                     </div>
                 </section>
 
+                {% if currency_conversion.required or output_currency %}
+                    <section class="ws-card" aria-labelledby="currency-heading">
+                        <div class="ws-card-header">
+                            <p class="ws-eyebrow">Currency</p>
+                            <h2 class="ws-card-title" id="currency-heading">Currency conversion</h2>
+                        </div>
+                        <div class="ws-card-body iteration-card-body">
+                            <p>
+                                Target currency:
+                                <strong>{{ currency_conversion.target_currency|default:output_currency }}</strong>
+                            </p>
+                            <p>Rate basis: {{ currency_conversion.rate_basis|default:"not_applicable" }}</p>
+                            {% if currency_conversion.notes %}
+                                <p>{{ currency_conversion.notes }}</p>
+                            {% endif %}
+                        </div>
+                    </section>
+                {% endif %}
+
                 {% for file_mapping in file_mappings %}
                     <section class="ws-card" aria-labelledby="mapping-file-{{ forloop.counter }}">
                         <div class="ws-card-header ws-card-header--row mapping-file-header">
@@ -146,6 +165,15 @@
                             id="file-mapping-{{ forloop.counter }}"
                             hidden
                         >
+                            {% if file_mapping.detected_currency %}
+                                <div class="mapping-ignored">
+                                    <span>Detected currency</span>
+                                    <p>
+                                        {{ file_mapping.detected_currency.currency|default:"Unknown" }}
+                                        ({{ file_mapping.detected_currency.confidence }})
+                                    </p>
+                                </div>
+                            {% endif %}
                             <div class="mapping-list">
                             {% for mapping in file_mapping.mappings %}
                                 <div class="mapping-row">
@@ -196,6 +224,13 @@
                             </button>
                         {% endif %}
                     </div>
+                    {% if merge_preview.warnings %}
+                        <div class="ws-card-body">
+                            {% for warning in merge_preview.warnings %}
+                                <p class="ws-field-error">{{ warning }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                     {% if merge_preview.rows %}
                         <div class="ws-table-wrap preview-table" id="spreadsheet-preview" data-preview-table hidden>
                             <table class="ws-table">

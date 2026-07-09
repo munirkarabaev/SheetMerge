@@ -1,5 +1,6 @@
 """Model exports for the core application."""
 
+from core.models.exchange_rate import ExchangeRate
 from core.models.mergeset import Mergeset
 from core.models.mergeset_file import MergesetFile
 from core.models.merge_planning import (
@@ -11,6 +12,7 @@ from core.models.merge_planning import (
 
 __all__ = [
     "AIUsageRecord",
+    "ExchangeRate",
     "MergePlan",
     "MergePlanningMessage",
     "MergePlanningSession",

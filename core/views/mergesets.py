@@ -234,10 +234,13 @@ class MergesetColumnMappingView(OwnedMergesetQuerysetMixin, DetailView):
 
         context = super().get_context_data(**kwargs)
         plan_json = self.merge_plan.plan_json
+        merge_preview = build_merge_preview(self.merge_plan)
         context["merge_plan"] = self.merge_plan
         context["final_columns"] = plan_json.get("final_columns", [])
         context["file_mappings"] = plan_json.get("file_mappings", [])
-        context["merge_preview"] = build_merge_preview(self.merge_plan)
+        context["currency_conversion"] = plan_json.get("currency_conversion", {})
+        context["output_currency"] = plan_json.get("output_currency")
+        context["merge_preview"] = merge_preview
         context["revision_form"] = kwargs.get("revision_form", MergePlanRevisionForm())
         return context
 

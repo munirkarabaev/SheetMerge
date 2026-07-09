@@ -6,12 +6,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.models import AIUsageRecord, MergePlan, MergePlanningMessage
+from core.services.ai_contract import build_openai_response_schema
 from core.services.ai_usage import ensure_user_has_ai_credits, record_ai_usage
 from core.services.ai_planning import (
     DEFAULT_OPENAI_MODEL,
     OpenAIPlanningError,
     _build_openai_client,
-    _build_openai_response_schema,
     _extract_response_payload,
     _validate_response_payload,
 )
@@ -83,7 +83,7 @@ def request_merge_plan_revision(
                 "type": "json_schema",
                 "name": "merge_plan_revision",
                 "strict": True,
-                "schema": _build_openai_response_schema(),
+                "schema": build_openai_response_schema(),
             }
         },
     )
@@ -109,8 +109,10 @@ def _build_revision_system_prompt() -> str:
         "You revise an existing SheetMerge mapping plan. Keep the current "
         "final columns and file mappings unless the user explicitly asks to "
         "change them. For whole-spreadsheet edits such as sorting rows, update "
-        "result_operations instead of changing column mappings. Return a full "
-        "mapping_ready plan, not a partial patch."
+        "result_operations instead of changing column mappings. Preserve "
+        "output_currency, currency_conversion, and detected_currency unless "
+        "the user asks to change currency handling. Return a full mapping_ready "
+        "plan, not a partial patch."
     )
 
 

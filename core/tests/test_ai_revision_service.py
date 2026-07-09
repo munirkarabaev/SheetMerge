@@ -82,6 +82,13 @@ class MergePlanRevisionServiceTests(TestCase):
                 "status": "mapping_ready",
                 "assistant_message": "Ready for review.",
                 "questions": [],
+                "output_currency": None,
+                "currency_conversion": {
+                    "required": False,
+                    "target_currency": None,
+                    "rate_basis": "not_applicable",
+                    "notes": "",
+                },
                 "final_columns": [{"name": "Date", "type": "date"}],
                 "file_mappings": [],
                 "result_operations": [],
@@ -94,7 +101,9 @@ class MergePlanRevisionServiceTests(TestCase):
         client = FakeOpenAIClient(
             (
                 '{"status":"mapping_ready","assistant_message":"Sorted by Date.",'
-                '"questions":[],"final_columns":[{"name":"Date","type":"date"}],'
+                '"questions":[],"output_currency":null,"currency_conversion":'
+                '{"required":false,"target_currency":null,"rate_basis":"not_applicable",'
+                '"notes":""},"final_columns":[{"name":"Date","type":"date"}],'
                 '"file_mappings":[],"result_operations":[{"type":"sort",'
                 '"column":"Date","direction":"ascending"}]}'
             )
@@ -128,7 +137,9 @@ class MergePlanRevisionServiceTests(TestCase):
         client = FakeOpenAIClient(
             (
                 '{"status":"mapping_ready","assistant_message":"No changes needed.",'
-                '"questions":[],"final_columns":[{"name":"Date","type":"date"}],'
+                '"questions":[],"output_currency":null,"currency_conversion":'
+                '{"required":false,"target_currency":null,"rate_basis":"not_applicable",'
+                '"notes":""},"final_columns":[{"name":"Date","type":"date"}],'
                 '"file_mappings":[],"result_operations":[]}'
             )
         )
@@ -148,7 +159,9 @@ class MergePlanRevisionServiceTests(TestCase):
         client = FakeOpenAIClient(
             (
                 '{"status":"mapping_ready","assistant_message":"No changes needed.",'
-                '"questions":[],"final_columns":[{"name":"Date","type":"date"}],'
+                '"questions":[],"output_currency":null,"currency_conversion":'
+                '{"required":false,"target_currency":null,"rate_basis":"not_applicable",'
+                '"notes":""},"final_columns":[{"name":"Date","type":"date"}],'
                 '"file_mappings":[],"result_operations":[]}'
             )
         )

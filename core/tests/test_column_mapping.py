@@ -98,6 +98,13 @@ class ColumnMappingViewTests(TestCase):
                 "status": "mapping_ready",
                 "assistant_message": "I mapped the date and amount fields.",
                 "questions": [],
+                "output_currency": None,
+                "currency_conversion": {
+                    "required": False,
+                    "target_currency": None,
+                    "rate_basis": "not_applicable",
+                    "notes": "",
+                },
                 "final_columns": [
                     {"name": "Date", "type": "date"},
                     {"name": "Amount", "type": "money"},
@@ -106,6 +113,12 @@ class ColumnMappingViewTests(TestCase):
                     {
                         "file_id": source_file.id,
                         "filename": "bank.csv",
+                        "detected_currency": {
+                            "currency": None,
+                            "confidence": "unknown",
+                            "evidence": [],
+                            "ambiguity": "",
+                        },
                         "mappings": [
                             {
                                 "target_column": "Date",
@@ -195,6 +208,41 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "Back to AI chat")
         self.assertContains(response, "Download CSV")
         self.assertContains(response, self.export_url)
+
+    def test_column_mapping_renders_currency_conversion_warnings(self) -> None:
+        """The review page should show conversion intent and preview warnings."""
+
+        merge_plan = self.create_merge_plan()
+        merge_plan.plan_json["output_currency"] = "GBP"
+        merge_plan.plan_json["currency_conversion"] = {
+            "required": True,
+            "target_currency": "GBP",
+            "rate_basis": "monthly_average",
+            "notes": "Convert USD to GBP.",
+        }
+        file_mapping = merge_plan.plan_json["file_mappings"][0]
+        file_mapping["detected_currency"] = {
+            "currency": "USD",
+            "confidence": "high",
+            "evidence": ["Filename suggests USD"],
+            "ambiguity": "",
+        }
+        file_mapping["mappings"][0]["source_columns"] = ["Missing Date"]
+        file_mapping["mappings"][1]["source_columns"] = ["Debit"]
+        file_mapping["mappings"][1]["transform"] = "convert_currency"
+        merge_plan.save(update_fields=["plan_json"])
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.mapping_url)
+
+        self.assertContains(response, "Currency conversion")
+        self.assertContains(response, "Target currency:")
+        self.assertContains(response, "GBP")
+        self.assertContains(response, "monthly_average")
+        self.assertContains(response, "Detected currency")
+        self.assertContains(response, "USD")
+        self.assertContains(response, "kept original amount")
+        self.assertContains(response, "recognized row date")
 
     def test_column_mapping_post_requests_ai_revision(self) -> None:
         """Submitting a revision should call the AI revision service."""
