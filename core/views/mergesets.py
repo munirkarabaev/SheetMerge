@@ -74,6 +74,15 @@ class MergesetDetailView(OwnedMergesetQuerysetMixin, DetailView):
     template_name = "core/mergesets/mergeset_detail.html"
     context_object_name = "mergeset"
 
+    def get(self, request, *args, **kwargs):
+        """Send approved workflows straight to mapping review."""
+
+        self.object = self.get_object()
+        if self.object.merge_plans.filter(status=MergePlan.Status.APPROVED).exists():
+            return redirect("core:mergeset_column_mapping", pk=self.object.pk)
+        context = self.get_context_data(object=self.object)
+        return self.render_to_response(context)
+
     def get_context_data(self, **kwargs):
         """Add the source-file upload form to the workspace."""
 
@@ -103,6 +112,8 @@ class MergesetAISuggestionsView(OwnedMergesetQuerysetMixin, DetailView):
         if not request.user.is_authenticated:
             return self.handle_no_permission()
         self.object = self.get_object()
+        if self.object.merge_plans.filter(status=MergePlan.Status.APPROVED).exists():
+            return redirect("core:mergeset_column_mapping", pk=self.object.pk)
         source_files = self.object.source_files.all()
         ai_suggestions_ready = (
             source_files.exists()

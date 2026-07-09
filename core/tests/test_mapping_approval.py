@@ -69,6 +69,14 @@ class MappingApprovalTests(TestCase):
             "core:mergeset_column_mapping",
             kwargs={"pk": self.mergeset.pk},
         )
+        self.detail_url = reverse(
+            "core:mergeset_detail",
+            kwargs={"pk": self.mergeset.pk},
+        )
+        self.ai_chat_url = reverse(
+            "core:mergeset_ai_suggestions",
+            kwargs={"pk": self.mergeset.pk},
+        )
         self.export_url = reverse(
             "core:mergeset_export_csv",
             kwargs={"pk": self.mergeset.pk},
@@ -174,6 +182,37 @@ class MappingApprovalTests(TestCase):
         self.assertContains(response, "Approved this mapping for export.")
         self.assertContains(response, "Status: Approved")
         self.assertContains(response, "Mapping approved")
+        self.assertNotContains(response, "Back to AI chat")
+
+    def test_unapproved_mapping_keeps_ai_chat_back_link(self) -> None:
+        """Unapproved review should still allow returning to AI chat."""
+
+        self.create_plan("Amount", MergePlan.Status.NEEDS_REVIEW)
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.mapping_url)
+
+        self.assertContains(response, "Back to AI chat")
+
+    def test_approved_mergeset_detail_redirects_to_mapping_review(self) -> None:
+        """Opening an approved mergeset should resume at mapping review."""
+
+        self.create_plan("Amount", MergePlan.Status.APPROVED)
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.detail_url)
+
+        self.assertRedirects(response, self.mapping_url)
+
+    def test_approved_mergeset_cannot_reopen_ai_chat(self) -> None:
+        """Approved workflows should redirect AI chat access back to review."""
+
+        self.create_plan("Amount", MergePlan.Status.APPROVED)
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.ai_chat_url)
+
+        self.assertRedirects(response, self.mapping_url)
 
     def test_export_prefers_approved_plan_over_newer_unapproved_plan(self) -> None:
         """CSV export should use the approved plan when one exists."""

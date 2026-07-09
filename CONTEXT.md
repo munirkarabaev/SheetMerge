@@ -317,6 +317,10 @@ Implemented approval behavior:
 - Marks the related planning session as `approved`.
 - CSV export prefers the approved plan, falling back to the latest plan when no
   plan has been approved yet.
+- Opening an approved mergeset resumes directly at the column mapping review.
+- Approved workflows redirect direct AI chat access back to the review page.
+- The review page hides the "Back to AI chat" action once the mapping is
+  approved.
 
 ## Important Next Work
 

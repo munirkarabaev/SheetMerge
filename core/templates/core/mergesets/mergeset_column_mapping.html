@@ -293,9 +293,11 @@
                 </section>
 
                 <div class="ws-workflow-footer">
-                    <a class="ws-btn-secondary" href="{% url 'core:mergeset_ai_suggestions' mergeset.pk %}">
-                        Back to AI chat
-                    </a>
+                    {% if merge_plan.status != "approved" %}
+                        <a class="ws-btn-secondary" href="{% url 'core:mergeset_ai_suggestions' mergeset.pk %}">
+                            Back to AI chat
+                        </a>
+                    {% endif %}
                     <a class="ws-btn-primary" href="{% url 'core:mergeset_export_csv' mergeset.pk %}">
                         Download CSV
                     </a>
