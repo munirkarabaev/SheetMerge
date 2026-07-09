@@ -89,12 +89,19 @@
                     <h1 class="ws-page-title">Review the AI mapping plan</h1>
                 </header>
 
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="ws-alert ws-alert--{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+
                 <section class="ws-card iteration-card" aria-labelledby="review-state-heading">
                     <div class="ws-card-header">
                         <h2 class="ws-card-title" id="review-state-heading">Review state</h2>
                     </div>
                     <div class="ws-card-body iteration-card-body">
                         <p>{{ merge_plan.ai_summary }}</p>
+                        <p>Status: {{ merge_plan.get_status_display }}</p>
                     </div>
                 </section>
 
@@ -292,7 +299,14 @@
                     <a class="ws-btn-primary" href="{% url 'core:mergeset_export_csv' mergeset.pk %}">
                         Download CSV
                     </a>
-                    <span class="ws-btn-disabled" aria-disabled="true">Approve mapping</span>
+                    {% if merge_plan.status == "approved" %}
+                        <span class="ws-btn-disabled" aria-disabled="true">Mapping approved</span>
+                    {% else %}
+                        <form method="post" action="{% url 'core:mergeset_approve_mapping' mergeset.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="ws-btn-primary">Approve mapping</button>
+                        </form>
+                    {% endif %}
                 </div>
             </div>
         </main>

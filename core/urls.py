@@ -6,6 +6,7 @@ from core.views import (
     BillingPageView,
     HomePageView,
     MergesetAISuggestionsView,
+    MergesetApproveMappingView,
     MergesetCreateView,
     MergesetColumnMappingView,
     MergesetCsvExportView,
@@ -44,6 +45,11 @@ urlpatterns = [
         "mergesets/<int:pk>/column-mapping/",
         MergesetColumnMappingView.as_view(),
         name="mergeset_column_mapping",
+    ),
+    path(
+        "mergesets/<int:pk>/column-mapping/approve/",
+        MergesetApproveMappingView.as_view(),
+        name="mergeset_approve_mapping",
     ),
     path(
         "mergesets/<int:pk>/column-mapping/export.csv",

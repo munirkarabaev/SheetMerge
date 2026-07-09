@@ -302,20 +302,35 @@ Implemented conversion behavior:
 - Shows conversion intent, detected currencies, and warnings on the column
   mapping review page.
 
+### Mapping Approval
+
+The column mapping review page now supports approving the latest generated merge
+plan.
+
+Implemented approval behavior:
+
+- Route: `/mergesets/<pk>/column-mapping/approve/`
+- View: `MergesetApproveMappingView`
+- Owner-only POST approval.
+- Marks the latest merge plan as `approved`.
+- Moves any other plans for the same mergeset back to `needs_review`.
+- Marks the related planning session as `approved`.
+- CSV export prefers the approved plan, falling back to the latest plan when no
+  plan has been approved yet.
+
 ## Important Next Work
 
 Date normalization and chronological sorting now exist in the deterministic
 preview layer. The next practical work is to continue the end-to-end workflow:
 
-1. Add final approval/finalization for a reviewed mapping.
-2. Improve amount normalization beyond debit/credit signed amount transforms.
-3. Consider richer currency conversion provenance in exports, such as rate and
+1. Improve amount normalization beyond debit/credit signed amount transforms.
+2. Consider richer currency conversion provenance in exports, such as rate and
    provider columns or downloadable warning summaries.
+3. Add a clearer completed-workflow screen after approval/export.
 
 ## Known Gaps
 
-- Final export/download is not fully implemented yet.
-- Approving/finalizing a mapping is still not the main completed workflow.
+- Export/download is CSV-only.
 - Date normalization currently outputs ISO `YYYY-MM-DD`.
 - Date-aware sorting relies on recognized common date formats; unrecognized dates
   remain visible but sort after recognized dates.

@@ -1,5 +1,6 @@
 """View exports for the core application."""
 
+from core.views.approvals import MergesetApproveMappingView
 from core.views.exports import MergesetCsvExportView
 from core.views.home import HomePageView
 from core.views.mergesets import (
@@ -19,6 +20,7 @@ __all__ = [
     "BillingPageView",
     "HomePageView",
     "MergesetAISuggestionsView",
+    "MergesetApproveMappingView",
     "MergesetColumnMappingView",
     "MergesetCreateView",
     "MergesetCsvExportView",
