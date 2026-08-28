@@ -82,7 +82,10 @@ class FrankfurterExchangeRateProvider:
         )
         request = Request(
             f"{_FRANKFURTER_API_BASE_URL}/rates?{query}",
-            headers={"Accept": "application/json"},
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "SheetMerge/0.1",
+            },
         )
         try:
             with self.opener(request, timeout=self.timeout) as response:
@@ -191,8 +194,18 @@ def _normalize_rate(rate: Decimal) -> Decimal:
     return normalized
 
 
-def _extract_frankfurter_rate(payload: dict, quote_currency: str) -> Decimal | None:
+def _extract_frankfurter_rate(payload: dict | list, quote_currency: str) -> Decimal | None:
     """Return the quoted rate from a Frankfurter time-series response."""
+
+    if isinstance(payload, list):
+        for row in payload:
+            if (
+                isinstance(row, dict)
+                and row.get("quote") == quote_currency
+                and "rate" in row
+            ):
+                return row["rate"]
+        return None
 
     rates = payload.get("rates")
     if not isinstance(rates, dict):

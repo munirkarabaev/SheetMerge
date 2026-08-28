@@ -119,7 +119,9 @@ class ExchangeRateServiceTests(TestCase):
     def test_default_provider_fetches_from_frankfurter(self) -> None:
         """Frankfurter should be usable as the real default provider."""
 
-        opener = FakeHTTPOpener('{"rates":{"2026-05":{"GBP":0.81234567}}}')
+        opener = FakeHTTPOpener(
+            '[{"date":"2026-05-01","base":"EUR","quote":"GBP","rate":0.81234567}]'
+        )
         provider = FrankfurterExchangeRateProvider(opener=opener, timeout=3)
 
         result = get_monthly_average_rate("EUR", "GBP", 2026, 5, provider=provider)
@@ -131,6 +133,7 @@ class ExchangeRateServiceTests(TestCase):
         self.assertIn("base=EUR", request.full_url)
         self.assertIn("quotes=GBP", request.full_url)
         self.assertIn("group=month", request.full_url)
+        self.assertEqual(request.headers["User-agent"], "SheetMerge/0.1")
 
     def test_same_currency_returns_one_without_storage(self) -> None:
         """No provider or database row is needed for same-currency conversion."""
