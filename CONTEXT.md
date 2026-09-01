@@ -1,7 +1,19 @@
 # SheetMerge Context
 
-Last updated: 2026-06-19
-Current feature branch: `feature/ai-integration`
+Last updated: 2026-09-01
+Current feature branch: `feature/further-ai-integration`
+Current baseline: `e09960d` (`latest updates i forgot to push`)
+
+## How to Maintain This File
+
+This is a human-maintained engineering handoff, not an automatically generated
+Django artifact. At the end of every implementation session, update the date,
+branch/baseline, implemented work, known gaps, test result, and suggested next
+work. Do not record secrets, tokens, personal data, or raw customer CSV data.
+
+Use [prompts/start-session.md](prompts/start-session.md) at the beginning of a
+session. Record durable architectural choices in [DECISIONS.md](DECISIONS.md),
+not in chat history. The README remains the source of truth for local setup.
 
 ## Project Purpose
 
@@ -31,15 +43,10 @@ columns involved when asking for confirmation.
 
 ## Current Branch State
 
-This branch contains the AI integration work. At the time this context was
-written, the latest uncommitted implementation changes were focused on:
-
-- `core/services/ai_planning.py`
-- `core/static/core/js/ai_chat.js`
-- `core/tests/test_ai_planning_service.py`
-
-The user interrupted before implementing better date-aware sorting and date
-normalization. Do not assume that work is complete.
+The AI integration, deterministic preview, currency conversion foundation, and
+mapping approval work are present in the current baseline. The latest commit
+adjusted exchange-rate provider error handling and its tests. The working tree
+was clean when this context was refreshed.
 
 ## Implemented This Session
 
@@ -360,17 +367,19 @@ Files close to the 400-line policy:
 
 ## Test Status
 
-The full Django test suite was run multiple times during the AI integration work.
-The latest successful full-suite result after the Frankfurter provider was
-122 tests passing.
+The last documented full-suite result after the Frankfurter provider was
+122 tests passing. A fresh local environment on 2026-09-01 discovers 135 tests
+and passes `manage.py check`; run the complete suite after the next application
+change to establish a current full-suite result.
 
-If only this context file changed, application tests are not expected to be
-affected. For implementation changes, run:
+Documentation-only changes do not require the Django suite. For implementation
+changes, create the ignored local virtual environment described in the README,
+then run:
 
 ```bash
-./venv/bin/python manage.py test
+./.venv/bin/python manage.py test
 ```
 
 ## Suggested Commit Message
 
-`Document AI integration session context`
+`docs: refresh project handoff context`
