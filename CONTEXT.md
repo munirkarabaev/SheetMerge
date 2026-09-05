@@ -1,8 +1,8 @@
 # SheetMerge Context
 
-Last updated: 2026-09-01
+Last updated: 2026-09-05
 Current feature branch: `feature/further-ai-integration`
-Current baseline: `e09960d` (`latest updates i forgot to push`)
+Current baseline: `63742cf` (`refresh project handoff context`)
 
 ## How to Maintain This File
 
@@ -47,6 +47,51 @@ The AI integration, deterministic preview, currency conversion foundation, and
 mapping approval work are present in the current baseline. The latest commit
 adjusted exchange-rate provider error handling and its tests. The working tree
 was clean when this context was refreshed.
+
+## 2026-09-05 — Product direction and local testing setup
+
+- The durable product direction is now recorded in `ROADMAP.md`: SheetMerge is
+  a repeatable, auditable financial-export normalization layer for recurring
+  monthly-close work, not generic spreadsheet software or a full accounting
+  platform.
+- Validate first with bookkeepers or accountants handling recurring bank, card,
+  and platform exports for small businesses.
+- AI should propose a constrained mapping for a new or changed source format;
+  a human approves it, and deterministic code executes approved profiles for
+  every row. Known formats should normally require no AI call.
+- The immediate implementation priority is safe export and transformation
+  behavior: approval-only export, blocking exceptions, formula-injection
+  protection, amount/date normalization, provenance, and reconciliation.
+- A global `playwright` MCP server was configured for Codex using
+  `npx @playwright/mcp@latest --isolated --caps=testing`. Node.js 22 is already
+  installed. It uses an isolated browser profile and is not application or
+  repository configuration. Start a fresh Codex session before using it because
+  the current session cannot load newly configured MCP tools dynamically.
+- No real customer financial data should be uploaded until the safety gates in
+  `ROADMAP.md` are complete.
+
+## Latest Session Handoff
+
+### New-machine setup
+
+- Created the ignored project-local `.venv` with Python 3.12.3 and installed
+  the pinned dependencies.
+- Created the ignored `.env` file from `.env.template`; the user configured
+  `OPENAI_API_KEY` locally. Do not read, print, commit, or copy that secret.
+- `./.venv/bin/python manage.py check` passes.
+- A fresh test run discovers 135 tests. A complete current full-suite result is
+  still needed after the next application change.
+
+### AI-credit operations
+
+- User AI credits are an internal token counter, not a dollar balance: one
+  credit is deducted for each total token reported by OpenAI.
+- Credits can currently be allocated only through Django admin: select the
+  user and edit `AI token credit balance`. The saved value applies to the next
+  AI request without restarting the server.
+- There is no customer-facing purchase/top-up flow and no exact USD spend cap.
+  Because GPT-5.5 prices input and output tokens differently, a token balance
+  cannot represent an exact dollar amount.
 
 ## Implemented This Session
 
@@ -382,4 +427,4 @@ then run:
 
 ## Suggested Commit Message
 
-`docs: refresh project handoff context`
+`docs: record local setup and AI-credit operations`
