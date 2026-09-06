@@ -1,16 +1,18 @@
 """Tests for approving reviewed merge plans."""
 
 import csv
+from decimal import Decimal
 from io import StringIO
 import shutil
 import tempfile
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from core.models import MergePlan, MergePlanningSession, Mergeset, MergesetFile
+from core.models import ExchangeRate, MergePlan, MergePlanningSession, Mergeset, MergesetFile
 
 
 User = get_user_model()
@@ -225,5 +227,103 @@ class MappingApprovalTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         rows = list(csv.reader(StringIO(response.content.decode("utf-8"))))
-        self.assertEqual(rows[0], ["Approved Amount"])
-        self.assertEqual(rows[1], ["10.00"])
+        self.assertEqual(rows[0][0], "Approved Amount")
+        self.assertEqual(rows[1][0], "10.00")
+
+    def test_export_redirects_unapproved_plan_to_mapping_review(self) -> None:
+        """CSV export should require the owner to approve the mapping first."""
+
+        self.create_plan("Amount", MergePlan.Status.NEEDS_REVIEW)
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.export_url, follow=True)
+
+        self.assertRedirects(response, self.mapping_url)
+        self.assertContains(response, "Approve the column mapping before exporting a CSV.")
+
+    def test_export_blocks_approved_plan_with_currency_exception(self) -> None:
+        """CSV export should not use an unconverted amount as converted output."""
+
+        plan = self.create_plan("Amount", MergePlan.Status.APPROVED)
+        plan.plan_json["output_currency"] = "GBP"
+        plan.plan_json["currency_conversion"] = {
+            "required": True,
+            "target_currency": "GBP",
+            "rate_basis": "monthly_average",
+            "notes": "Convert USD to GBP.",
+        }
+        file_mapping = plan.plan_json["file_mappings"][0]
+        file_mapping["detected_currency"]["currency"] = "USD"
+        file_mapping["mappings"][0]["transform"] = "convert_currency"
+        plan.save(update_fields=["plan_json"])
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.export_url, follow=True)
+
+        self.assertRedirects(response, self.mapping_url)
+        self.assertContains(response, "Resolve all preview exceptions before exporting a CSV.")
+        self.assertContains(response, "Resolve these exceptions before CSV export:")
+
+    def test_export_escapes_formula_like_cell_values(self) -> None:
+        """CSV export should make source text safe for spreadsheet applications."""
+
+        self.source_file.file.save(
+            "bank.csv",
+            ContentFile(b'Date,Amount\n2026-01-01,"=SUM(1,1)"\n'),
+            save=True,
+        )
+        plan = self.create_plan("Amount", MergePlan.Status.APPROVED)
+        plan.plan_json["final_columns"][0]["type"] = "text"
+        plan.save(update_fields=["plan_json"])
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.export_url)
+
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8"))))
+        self.assertEqual(rows[1][0], "'=SUM(1,1)")
+
+    def test_export_includes_currency_conversion_provenance(self) -> None:
+        """Converted CSV rows should expose the rate data used for audit."""
+
+        ExchangeRate.objects.create(
+            base_currency="USD",
+            quote_currency="GBP",
+            year=2026,
+            month=1,
+            average_rate=Decimal("0.80000000"),
+            provider="test_rates",
+        )
+        plan = self.create_plan("Amount", MergePlan.Status.APPROVED)
+        plan.plan_json["output_currency"] = "GBP"
+        plan.plan_json["currency_conversion"] = {
+            "required": True,
+            "target_currency": "GBP",
+            "rate_basis": "monthly_average",
+            "notes": "Convert USD to GBP.",
+        }
+        file_mapping = plan.plan_json["file_mappings"][0]
+        file_mapping["detected_currency"]["currency"] = "USD"
+        file_mapping["mappings"][0]["transform"] = "convert_currency"
+        file_mapping["mappings"].append(
+            {
+                "target_column": "Unused Date",
+                "source_columns": ["Date"],
+                "transform": "parse_date",
+                "notes": "",
+            }
+        )
+        plan.save(update_fields=["plan_json"])
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.export_url)
+
+        rows = list(csv.reader(StringIO(response.content.decode("utf-8"))))
+        self.assertEqual(rows[0][-10:], [
+            "Conversion target column", "Original amount", "Original currency",
+            "Reporting amount", "Reporting currency", "Exchange rate",
+            "Rate provider", "Rate period", "Rate policy", "Rounding policy",
+        ])
+        self.assertEqual(rows[1][-10:], [
+            "Amount", "10.00", "USD", "8.00", "GBP", "0.80000000",
+            "test_rates", "2026-01", "monthly_average", "half_up_2_decimal_places",
+        ])

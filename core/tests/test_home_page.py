@@ -32,3 +32,10 @@ class HomePageTests(TestCase):
         self.assertContains(response, "Mergesets")
         self.assertContains(response, "Billing")
         self.assertContains(response, "Support")
+
+    def test_home_page_includes_site_favicon(self) -> None:
+        """The shared page shell should reference the SheetMerge favicon."""
+
+        response = self.client.get(reverse("core:home"))
+
+        self.assertContains(response, 'href="/static/core/favicon.svg"')

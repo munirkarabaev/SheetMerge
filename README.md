@@ -2,15 +2,16 @@
 
 SheetMerge is an AI-assisted web application that helps users combine messy transaction spreadsheets into one clean, organized spreadsheet.
 
-Users upload multiple CSV/XLSX files from different sources.
+Users upload multiple CSV files from different sources. XLSX import/export is
+planned, not currently implemented.
 
 The application:
 - Detects transaction columns
 - Standardizes formats
 - Merges transactions
-- Groups similar transactions
+- Records source provenance and reconciliation totals
 - Sorts by date and month
-- Exports a clean spreadsheet
+- Exports a clean CSV after mapping approval and resolution of blocking exceptions
 
 The AI assistant can ask clarification questions and propose a structured merge
 plan. Python deterministically applies the approved plan for previews and

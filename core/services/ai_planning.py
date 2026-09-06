@@ -18,6 +18,7 @@ from core.services.ai_contract import (
     build_response_contract,
 )
 from core.services.ai_usage import ensure_user_has_ai_credits, record_ai_usage
+from core.services.plan_validation import MergePlanValidationError, validate_merge_plan_payload
 
 
 DEFAULT_OPENAI_MODEL = "gpt-5.5"
@@ -88,6 +89,7 @@ def run_merge_planning_turn(
     merge_plan = None
 
     if response_payload["status"] == "mapping_ready":
+        _validate_mapping_plan(session.mergeset, response_payload)
         merge_plan = MergePlan.objects.create(
             mergeset=session.mergeset,
             session=session,
@@ -210,6 +212,15 @@ def _validate_response_payload(payload: dict[str, Any]) -> None:
         raise OpenAIPlanningError("OpenAI response result operations must be a list.")
 
 
+def _validate_mapping_plan(mergeset: Mergeset, payload: dict[str, Any]) -> None:
+    """Translate semantic plan errors into safe AI-planning failures."""
+
+    try:
+        validate_merge_plan_payload(mergeset, payload)
+    except MergePlanValidationError as error:
+        raise OpenAIPlanningError(f"OpenAI returned an unsafe mapping plan: {error}") from error
+
+
 def _build_system_prompt() -> str:
     """Return stable instructions for the merge planning assistant."""
 
@@ -276,4 +287,3 @@ def _build_source_file_payload(index: int, source_file: MergesetFile) -> dict[st
         "row_count": source_file.row_count,
         "sample_rows": source_file.sample_rows,
     }
-

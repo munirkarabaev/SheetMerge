@@ -16,6 +16,7 @@ from core.views import (
     MergesetFileUploadView,
     MergesetListView,
     MergesetPlanningResetView,
+    MergesetWorkflowCompleteView,
     SupportPageView,
 )
 
@@ -55,6 +56,11 @@ urlpatterns = [
         "mergesets/<int:pk>/column-mapping/export.csv",
         MergesetCsvExportView.as_view(),
         name="mergeset_export_csv",
+    ),
+    path(
+        "mergesets/<int:pk>/complete/",
+        MergesetWorkflowCompleteView.as_view(),
+        name="mergeset_workflow_complete",
     ),
     path(
         "mergesets/<int:pk>/files/",

@@ -102,6 +102,7 @@ def build_response_contract() -> dict[str, Any]:
             "Detect source currencies from currency columns, headers, symbols, filenames, and sample rows.",
             "If currency conversion is requested but a source currency is ambiguous, ask a concrete file-specific question.",
             "Use output_currency and currency_conversion when the user asks to normalize amounts into one currency.",
+            "For every parse_amount, signed-amount, or convert_currency mapping, specify amount_format with decimal_separator and thousands_separator.",
             "Use only the supported transform names exactly as written.",
         ],
         "needs_clarification": {
@@ -185,6 +186,18 @@ def _column_mappings_schema() -> dict[str, Any]:
                 "transform": {
                     "type": "string",
                     "enum": supported_transforms(),
+                },
+                "amount_format": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["decimal_separator", "thousands_separator"],
+                    "properties": {
+                        "decimal_separator": {"type": "string", "enum": [".", ","]},
+                        "thousands_separator": {
+                            "type": ["string", "null"],
+                            "enum": [",", ".", " ", "'", None],
+                        },
+                    },
                 },
                 "notes": {"type": "string"},
             },

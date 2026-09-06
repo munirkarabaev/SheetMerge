@@ -1,8 +1,10 @@
 # SheetMerge Context
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 Current feature branch: `feature/further-ai-integration`
-Current baseline: `63742cf` (`refresh project handoff context`)
+Baseline before workflow-safety commit: `14def8b`
+(`docs: record product direction and browser testing setup`). The safety work
+described below is included in `feat: complete safe, auditable merge workflow`.
 
 ## How to Maintain This File
 
@@ -44,9 +46,11 @@ columns involved when asking for confirmation.
 ## Current Branch State
 
 The AI integration, deterministic preview, currency conversion foundation, and
-mapping approval work are present in the current baseline. The latest commit
-adjusted exchange-rate provider error handling and its tests. The working tree
-was clean when this context was refreshed.
+mapping approval work are present in the baseline. The workflow-safety commit
+on this branch completes the safety layer: approval-only export,
+blocking exceptions, formula protection, amount normalization, provenance,
+reconciliation, completion, semantic AI-plan validation, and favicon support.
+Review Git status before starting further changes.
 
 ## 2026-09-05 — Product direction and local testing setup
 
@@ -79,8 +83,8 @@ was clean when this context was refreshed.
 - Created the ignored `.env` file from `.env.template`; the user configured
   `OPENAI_API_KEY` locally. Do not read, print, commit, or copy that secret.
 - `./.venv/bin/python manage.py check` passes.
-- A fresh test run discovers 135 tests. A complete current full-suite result is
-  still needed after the next application change.
+- The initial setup run discovered 135 tests. The later recorded full-suite
+  result is 154 passing tests on 2026-09-05; see Test Status below.
 
 ### AI-credit operations
 
@@ -94,6 +98,79 @@ was clean when this context was refreshed.
   cannot represent an exact dollar amount.
 
 ## Implemented This Session
+
+### Export approval gate and favicon
+
+- CSV export now uses only an explicitly approved `MergePlan`; it no longer
+  falls back to the latest plan awaiting review.
+- An attempted export with an unapproved plan redirects to column mapping with
+  an instruction to approve the mapping first.
+- The column-mapping page shows the CSV download link only after approval.
+- Added a native SheetMerge SVG favicon and its shared-template regression
+  test, eliminating the home page's missing-favicon browser error.
+
+### Export exception gate
+
+- Preview processing now records deterministic, export-blocking exceptions for
+  invalid non-empty typed date/amount values and failed currency conversions.
+- CSV export and its download action are blocked until those exceptions are
+  resolved, even when the mapping plan has already been approved.
+- Failed currency conversion now leaves the converted output cell blank; it
+  never copies the unconverted source amount into that field.
+
+### CSV formula-injection protection
+
+- CSV export now neutralizes formula-like header and cell text beginning with
+  `=`, `+`, `-`, or `@` by prefixing an apostrophe.
+- Valid signed numeric amounts remain unchanged so they retain spreadsheet
+  numeric behavior.
+
+### Amount normalization and currency provenance
+
+- Amount mappings can now declare `amount_format` with explicit decimal and
+  thousands separators. Supported US and European formats are normalized to
+  canonical decimal text; malformed grouping becomes an export-blocking
+  exception.
+- Successful currency conversion now records per-row export provenance:
+  original/reporting amount and currency, rate, provider, monthly period,
+  policy, rounding, and target output column.
+- CSV exports include those provenance columns only when conversion occurred.
+
+### Transaction-level provenance
+
+- Every CSV export row now includes source file, original CSV row number,
+  original source values, mapping-plan version, applied transformations, and
+  mapping review state.
+- Provenance remains paired with the correct output row after deterministic
+  sorting. The mapping-plan version is the immutable `MergePlan` identifier
+  (`plan-<id>`), so later AI revisions cannot overwrite an earlier audit trail.
+
+### Reconciliation and exception review
+
+- Column-mapping review now shows output row count, row counts by source file,
+  and normalized totals for each money column.
+- Blocking validation failures are shown as categorised Open exceptions.
+- Exceptions cannot be silently acknowledged: CSV export remains blocked until
+  the user asks AI to revise the plan, reviews the regenerated output, and
+  obtains an exception-free result.
+
+### Completed workflow screen
+
+- Approved, exception-free mergesets now have an owner-only completion screen
+  with final row/total summary, plan identifier, provenance notice, CSV export,
+  and a return link to mapping review.
+- The screen enforces the same approval and exception safety gates as export;
+  it cannot be used to bypass review.
+
+### Semantic AI-plan validation
+
+- Mapping-ready plans and AI revisions are now semantically validated before
+  persistence. Validation rejects unknown/unparsed files, unknown source
+  columns, unsupported transforms, invalid output targets and sort operations,
+  invalid amount separators, invalid currency codes, and unsafe low-confidence
+  currency conversion.
+- All accepted AI plans still begin in `needs_review`; human approval remains
+  mandatory before export.
 
 ### AI Planning Data
 
@@ -253,13 +330,16 @@ Current behavior:
 - Also normalizes recognized date values when the final output column type is
   `date`, even if the AI produced a `copy` transform.
 
-Current limitation:
+Normalization behavior and limitations:
 
-- `parse_amount` currently passes through the source value.
+- Money-typed output columns normalize amounts using the mapping's explicit
+  `amount_format`, or the legacy default separators when omitted. The
+  `parse_amount` transform alone does not normalize non-money output columns.
 - Date parsing supports common bank-export formats, but ambiguous numeric dates
   are interpreted with day-first formats before month-first formats.
 - Unrecognized date values are kept as their original text and sorted after
-  recognized dates.
+  recognized dates. Invalid non-empty date-typed values or `parse_date` results
+  also create blocking exceptions that prevent export.
 
 ### Preview UI
 
@@ -286,8 +366,9 @@ Important limitation:
 
 - The AI revises the plan JSON. The actual preview is still generated
   deterministically by Python from that plan.
-- If the plan says to sort by a date column, current Python sorting is still
-  simple string sorting, so mixed date formats can sort incorrectly.
+- Sorting recognizes supported date formats and orders them chronologically;
+  unrecognized values follow recognized dates in their original relative order.
+  When no values parse as dates, sorting falls back to text ordering.
 
 ### Encoding
 
@@ -303,21 +384,23 @@ This means common files with characters like `Café` can be parsed and previewed
 
 ### Currency Planning Contract
 
-The AI planning response contract now includes currency intent, but conversion
-is not implemented yet.
+The AI planning response contract includes currency intent and explicit amount
+locale metadata. Conversion is executed only by deterministic Python services.
 
 Added:
 
 - `output_currency`
 - `currency_conversion`
 - Per-file `detected_currency`
-- Future `convert_currency` transform
+- `convert_currency` transform
+- Optional `amount_format` with decimal and thousands separators for amount
+  mappings
 
 The prompt tells the AI to detect source currencies from currency columns,
 headers, symbols, filenames, and sample rows. If currency conversion is needed
 but the source currency is ambiguous, the AI should ask a concrete question
-naming the file and evidence. Exchange rates must not be invented by AI; future
-work should use a deterministic exchange-rate service.
+naming the file and evidence. Exchange rates must not be invented by AI; the
+deterministic exchange-rate service described below supplies cached/provider rates.
 
 ### Exchange Rate Cache
 
@@ -339,9 +422,8 @@ The service supports:
 The default provider is Frankfurter's public v2 API. Tests use fake providers and
 fake HTTP responses, so the test suite does not depend on live network access.
 Preview and export now apply `convert_currency` through the deterministic preview
-layer. If conversion cannot be completed for a row, SheetMerge keeps the
-original amount and records a preview warning instead of blocking the whole
-result.
+layer. If conversion cannot be completed for a row, SheetMerge leaves the
+converted cell blank, records a blocking exception, and prevents CSV export.
 
 Implemented conversion behavior:
 
@@ -349,8 +431,10 @@ Implemented conversion behavior:
 - Uses per-file `detected_currency` and plan-level target currency.
 - Uses cached/fetched monthly average rates via `get_monthly_average_rate`.
 - Formats converted values to two decimal places.
-- Keeps the original amount and warns when the amount, source/target currency,
-  row date, or exchange-rate lookup is unavailable.
+- Records provenance for every successful conversion, including original and
+  reporting values/currencies, rate, provider, period, policy, and rounding.
+- Leaves converted values blank and blocks export when the amount,
+  source/target currency, row date, or exchange-rate lookup is unavailable.
 - Shows conversion intent, detected currencies, and warnings on the column
   mapping review page.
 
@@ -367,8 +451,8 @@ Implemented approval behavior:
 - Marks the latest merge plan as `approved`.
 - Moves any other plans for the same mergeset back to `needs_review`.
 - Marks the related planning session as `approved`.
-- CSV export prefers the approved plan, falling back to the latest plan when no
-  plan has been approved yet.
+- CSV export uses only the approved plan. If no approved plan exists, it
+  redirects the owner to review/approval and does not create a download.
 - Opening an approved mergeset resumes directly at the column mapping review.
 - Approved workflows redirect direct AI chat access back to the review page.
 - The review page hides the "Back to AI chat" action once the mapping is
@@ -379,10 +463,8 @@ Implemented approval behavior:
 Date normalization and chronological sorting now exist in the deterministic
 preview layer. The next practical work is to continue the end-to-end workflow:
 
-1. Improve amount normalization beyond debit/credit signed amount transforms.
-2. Consider richer currency conversion provenance in exports, such as rate and
-   provider columns or downloadable warning summaries.
-3. Add a clearer completed-workflow screen after approval/export.
+1. Define data retention/deletion behavior, restrict sensitive logging, and
+   disclose which source samples are sent to AI.
 
 ## Known Gaps
 
@@ -390,8 +472,8 @@ preview layer. The next practical work is to continue the end-to-end workflow:
 - Date normalization currently outputs ISO `YYYY-MM-DD`.
 - Date-aware sorting relies on recognized common date formats; unrecognized dates
   remain visible but sort after recognized dates.
-- Amount normalization is still basic/pass-through except debit/credit signed
-  amount transforms.
+- Existing plans without `amount_format` retain the legacy `.` decimal and `,`
+  thousands default; review non-default source formats before approval.
 - AI revisions can request operations that the deterministic preview layer must
   support; unsupported behavior should be handled in Python, not assumed from
   the AI text.
@@ -412,10 +494,14 @@ Files close to the 400-line policy:
 
 ## Test Status
 
-The last documented full-suite result after the Frankfurter provider was
-122 tests passing. A fresh local environment on 2026-09-01 discovers 135 tests
-and passes `manage.py check`; run the complete suite after the next application
-change to establish a current full-suite result.
+The full suite passed on 2026-09-06: 154 tests in 105.196 seconds, using
+`./.venv/bin/python manage.py test` in Ubuntu/WSL. Django system checks passed
+and `manage.py makemigrations --check --dry-run` reported no changes.
+
+On 2026-09-06, documentation was reconciled against the current implementation
+for amount normalization, sorting, currency failures, and CSV-only support.
+The subsequent commit-preparation session ran the checks above and excluded
+generated `.playwright-mcp/` browser artifacts through `.gitignore`.
 
 Documentation-only changes do not require the Django suite. For implementation
 changes, create the ignored local virtual environment described in the README,
@@ -427,4 +513,4 @@ then run:
 
 ## Suggested Commit Message
 
-`docs: record local setup and AI-credit operations`
+`feat: complete safe, auditable merge workflow`

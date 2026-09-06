@@ -125,8 +125,8 @@ class MergePreviewCurrencyTests(TestCase):
         self.assertEqual([row["Amount"] for row in preview.rows], ["8.00", "2.00"])
         self.assertEqual(preview.warnings, [])
 
-    def test_convert_currency_keeps_original_amount_when_date_is_missing(self) -> None:
-        """Rows without a usable date should keep the source value and warn."""
+    def test_convert_currency_blanks_amount_when_date_is_missing(self) -> None:
+        """Rows without a usable date should leave converted amounts blank."""
 
         plan = self.create_plan()
         plan.plan_json["file_mappings"][0]["mappings"][0]["source_columns"] = [
@@ -136,10 +136,11 @@ class MergePreviewCurrencyTests(TestCase):
 
         preview = build_merge_preview(plan)
 
-        self.assertEqual([row["Amount"] for row in preview.rows], ["10.00", "2.50"])
+        self.assertEqual([row["Amount"] for row in preview.rows], ["", ""])
         self.assertEqual(len(preview.warnings), 1)
-        self.assertIn("kept original amount", preview.warnings[0])
+        self.assertIn("currency conversion failed", preview.warnings[0])
         self.assertIn("recognized row date", preview.warnings[0])
+        self.assertEqual(len(preview.blocking_errors), 1)
 
     def test_convert_currency_keeps_original_amount_when_currency_is_missing(self) -> None:
         """Rows without a detected source currency should keep the source value."""
@@ -150,12 +151,13 @@ class MergePreviewCurrencyTests(TestCase):
 
         preview = build_merge_preview(plan)
 
-        self.assertEqual(preview.rows[0]["Amount"], "10.00")
+        self.assertEqual(preview.rows[0]["Amount"], "")
         self.assertEqual(len(preview.warnings), 1)
         self.assertIn("source or target currency is missing", preview.warnings[0])
+        self.assertEqual(len(preview.blocking_errors), 1)
 
-    def test_convert_currency_keeps_original_amount_when_amount_is_invalid(self) -> None:
-        """Invalid amount text should not block the whole preview."""
+    def test_convert_currency_blanks_invalid_amount(self) -> None:
+        """Invalid amount text should not appear in a converted-amount column."""
 
         source_file = MergesetFile.objects.create(
             mergeset=self.mergeset,
@@ -173,6 +175,7 @@ class MergePreviewCurrencyTests(TestCase):
 
         preview = build_merge_preview(plan)
 
-        self.assertEqual(preview.rows[0]["Amount"], "unknown")
+        self.assertEqual(preview.rows[0]["Amount"], "")
         self.assertEqual(len(preview.warnings), 1)
         self.assertIn("could not be parsed", preview.warnings[0])
+        self.assertEqual(len(preview.blocking_errors), 1)

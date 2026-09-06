@@ -2,17 +2,20 @@
 
 import csv
 from dataclasses import dataclass
-from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
 from io import StringIO
+import json
 
 from core.models import MergePlan, MergesetFile
 from core.services.csv_parser import decode_csv_content
-from core.services.exchange_rates import (
-    ExchangeRateError,
-    ExchangeRateProvider,
-    get_monthly_average_rate,
+from core.services.currency_conversion import convert_currency
+from core.services.exchange_rates import ExchangeRateProvider
+from core.services.preview_validation import (
+    add_blocking_exception,
+    parse_date,
+    normalize_amount,
+    validate_preview_value,
 )
+from core.services.reconciliation import ReconciliationSummary, build_reconciliation_summary
 
 
 @dataclass(frozen=True)
@@ -22,6 +25,10 @@ class MergePreview:
     columns: list[str]
     rows: list[dict[str, str]]
     warnings: list[str]
+    blocking_errors: list[str]
+    conversion_provenance: list[list[dict[str, str]]]
+    transaction_provenance: list[dict[str, str]]
+    reconciliation: ReconciliationSummary
 
 
 def build_merge_preview(
@@ -43,6 +50,9 @@ def build_merge_preview(
     }
     rows = []
     warnings = []
+    blocking_errors = []
+    provenance_by_row: dict[int, list[dict[str, str]]] = {}
+    transaction_provenance_by_row: dict[int, dict[str, str]] = {}
     source_files = {
         source_file.id: source_file
         for source_file in merge_plan.mergeset.source_files.filter(
@@ -55,28 +65,56 @@ def build_merge_preview(
         if source_file is None:
             continue
 
-        for source_row in _read_source_rows(source_file):
-            rows.append(
-                _build_preview_row(
-                    final_columns,
-                    final_column_types,
-                    file_mapping,
-                    source_row,
-                    source_file,
-                    merge_plan.plan_json,
-                    warnings,
-                    rate_provider,
-                )
+        for source_row_number, source_row, original_values in _read_source_rows(source_file):
+            conversion_provenance: list[dict[str, str]] = []
+            row = _build_preview_row(
+                final_columns,
+                final_column_types,
+                file_mapping,
+                source_row,
+                source_file,
+                merge_plan.plan_json,
+                warnings,
+                blocking_errors,
+                conversion_provenance,
+                rate_provider,
+            )
+            rows.append(row)
+            provenance_by_row[id(row)] = conversion_provenance
+            transaction_provenance_by_row[id(row)] = _build_transaction_provenance(
+                merge_plan,
+                source_file,
+                source_row_number,
+                original_values,
+                file_mapping,
+                final_columns,
             )
 
     rows = _apply_result_operations(rows, merge_plan.plan_json.get("result_operations", []))
     if limit is not None:
         rows = rows[:limit]
-    return MergePreview(columns=final_columns, rows=rows, warnings=warnings)
+    transaction_provenance = [transaction_provenance_by_row[id(row)] for row in rows]
+    return MergePreview(
+        columns=final_columns,
+        rows=rows,
+        warnings=warnings,
+        blocking_errors=blocking_errors,
+        conversion_provenance=[provenance_by_row[id(row)] for row in rows],
+        transaction_provenance=transaction_provenance,
+        reconciliation=build_reconciliation_summary(
+            rows,
+            transaction_provenance,
+            final_column_types,
+            blocking_errors,
+            merge_plan.plan_json.get("output_currency"),
+        ),
+    )
 
 
-def _read_source_rows(source_file: MergesetFile) -> list[dict[str, str]]:
-    """Read stored CSV rows as dictionaries keyed by parsed headers."""
+def _read_source_rows(
+    source_file: MergesetFile,
+) -> list[tuple[int, dict[str, str], dict[str, str]]]:
+    """Read stored CSV rows with their original source line and values."""
 
     source_file.file.open("rb")
     try:
@@ -91,11 +129,45 @@ def _read_source_rows(source_file: MergesetFile) -> list[dict[str, str]]:
         delimiter=source_file.delimiter or ",",
     )
     next(reader, None)
-    return [
-        {key: (value or "").strip() for key, value in row.items()}
-        for row in reader
-        if row and any((value or "").strip() for value in row.values())
+    rows = []
+    for row_number, row in enumerate(reader, start=2):
+        if not row:
+            continue
+        original_values = {key: value or "" for key, value in row.items()}
+        source_row = {key: value.strip() for key, value in original_values.items()}
+        if any(source_row.values()):
+            rows.append((row_number, source_row, original_values))
+    return rows
+
+
+def _build_transaction_provenance(
+    merge_plan: MergePlan,
+    source_file: MergesetFile,
+    source_row_number: int,
+    original_values: dict[str, str],
+    file_mapping: dict,
+    final_columns: list[str],
+) -> dict[str, str]:
+    """Return an auditable record for one deterministic output row."""
+
+    transformations = [
+        {
+            "target_column": mapping.get("target_column", ""),
+            "source_columns": mapping.get("source_columns", []),
+            "transform": mapping.get("transform", "copy"),
+            "amount_format": mapping.get("amount_format"),
+        }
+        for mapping in file_mapping.get("mappings", [])
+        if mapping.get("target_column") in final_columns
     ]
+    return {
+        "source_file": source_file.original_name,
+        "source_row_number": str(source_row_number),
+        "original_values": json.dumps(original_values, ensure_ascii=False, sort_keys=True),
+        "mapping_plan_version": f"plan-{merge_plan.pk}",
+        "transformations": json.dumps(transformations, separators=(",", ":")),
+        "review_state": merge_plan.status,
+    }
 
 
 def _build_preview_row(
@@ -106,6 +178,8 @@ def _build_preview_row(
     source_file: MergesetFile,
     plan_json: dict,
     warnings: list[str],
+    blocking_errors: list[str],
+    conversion_provenance: list[dict[str, str]],
     rate_provider: ExchangeRateProvider | None,
 ) -> dict[str, str]:
     """Build one merged preview row from one source CSV row."""
@@ -123,6 +197,8 @@ def _build_preview_row(
             file_mapping,
             plan_json,
             warnings,
+            blocking_errors,
+            conversion_provenance,
             rate_provider,
         )
     return preview_row
@@ -136,6 +212,8 @@ def _apply_transform(
     file_mapping: dict | None = None,
     plan_json: dict | None = None,
     warnings: list[str] | None = None,
+    blocking_errors: list[str] | None = None,
+    conversion_provenance: list[dict[str, str]] | None = None,
     rate_provider: ExchangeRateProvider | None = None,
 ) -> str:
     """Apply a supported transform to a source row."""
@@ -154,149 +232,66 @@ def _apply_transform(
         transformed_value = _signed_amount(
             values[0] if values else "",
             values[1] if len(values) > 1 else "",
+            mapping.get("amount_format"),
         )
     elif transform == "credit_debit_to_signed_amount":
         credit = values[0] if values else ""
         debit = values[1] if len(values) > 1 else ""
-        transformed_value = _signed_amount(debit, credit)
+        transformed_value = _signed_amount(debit, credit, mapping.get("amount_format"))
     elif transform == "convert_currency":
-        transformed_value = _convert_currency(
+        result = convert_currency(
             values[0] if values else "",
             source_row,
             file_mapping or {},
             plan_json or {},
             source_file,
-            warnings if warnings is not None else [],
+            mapping.get("target_column", "this column"),
+            mapping.get("amount_format"),
             rate_provider,
         )
+        if result.warning:
+            _add_warning(warnings if warnings is not None else [], result.warning)
+        if result.blocking_error:
+            add_blocking_exception(
+                blocking_errors if blocking_errors is not None else [],
+                result.blocking_error,
+            )
+        if result.provenance is not None:
+            (conversion_provenance if conversion_provenance is not None else []).append(
+                result.provenance
+            )
+        transformed_value = result.value
     elif transform == "ignore":
         transformed_value = ""
     else:
         transformed_value = values[0] if values else ""
 
     if transform == "parse_date" or target_type == "date":
-        return _normalize_date(transformed_value)
+        transformed_value = _normalize_date(transformed_value)
+    if target_type == "money" and transform != "convert_currency":
+        normalized_amount = normalize_amount(transformed_value, mapping.get("amount_format"))
+        if normalized_amount is not None:
+            transformed_value = normalized_amount
+    validate_preview_value(
+        blocking_errors if blocking_errors is not None else [],
+        source_file.original_name,
+        target_column=mapping.get("target_column", "this column"),
+        target_type=target_type,
+        transform=transform or "copy",
+        value=transformed_value,
+        amount_format=mapping.get("amount_format"),
+    )
     return transformed_value
 
 
-def _signed_amount(debit: str, credit: str) -> str:
+def _signed_amount(debit: str, credit: str, amount_format: dict | None) -> str:
     """Return one signed amount from debit and credit values."""
 
-    debit_value = _clean_amount(debit)
-    credit_value = _clean_amount(credit)
+    debit_value = normalize_amount(debit, amount_format) or debit.strip()
+    credit_value = normalize_amount(credit, amount_format) or credit.strip()
     if debit_value:
         return debit_value if debit_value.startswith("-") else f"-{debit_value}"
     return credit_value
-
-
-def _clean_amount(value: str) -> str:
-    """Normalize common currency formatting without changing precision."""
-
-    cleaned_value = (
-        value.strip()
-        .replace(",", "")
-        .replace("£", "")
-        .replace("$", "")
-        .replace("€", "")
-    )
-    if cleaned_value.startswith("(") and cleaned_value.endswith(")"):
-        return f"-{cleaned_value[1:-1]}"
-    return cleaned_value
-
-
-def _convert_currency(
-    original_amount: str,
-    source_row: dict[str, str],
-    file_mapping: dict,
-    plan_json: dict,
-    source_file: MergesetFile,
-    warnings: list[str],
-    rate_provider: ExchangeRateProvider | None,
-) -> str:
-    """Convert an amount using the row month, or keep the original with a warning."""
-
-    amount = _parse_decimal_amount(original_amount)
-    if amount is None:
-        _add_warning(
-            warnings,
-            f"{source_file.original_name}: kept original amount because "
-            "it could not be parsed for currency conversion.",
-        )
-        return original_amount
-
-    source_currency = (
-        file_mapping.get("detected_currency", {}).get("currency") or ""
-    ).strip()
-    target_currency = (
-        plan_json.get("currency_conversion", {}).get("target_currency")
-        or plan_json.get("output_currency")
-        or ""
-    ).strip()
-    if not source_currency or not target_currency:
-        _add_warning(
-            warnings,
-            f"{source_file.original_name}: kept original amount because source "
-            "or target currency is missing.",
-        )
-        return original_amount
-
-    row_date = _find_row_date(source_row, file_mapping)
-    if row_date is None:
-        _add_warning(
-            warnings,
-            f"{source_file.original_name}: kept original amount because no "
-            "recognized row date was available for a monthly exchange rate.",
-        )
-        return original_amount
-
-    try:
-        rate = get_monthly_average_rate(
-            source_currency,
-            target_currency,
-            row_date.year,
-            row_date.month,
-            provider=rate_provider,
-        )
-    except ExchangeRateError as error:
-        _add_warning(
-            warnings,
-            f"{source_file.original_name}: kept original amount because "
-            f"exchange rate lookup failed: {error}",
-        )
-        return original_amount
-
-    return _format_money(amount * rate.average_rate)
-
-
-def _parse_decimal_amount(value: str) -> Decimal | None:
-    """Parse a CSV amount into Decimal when possible."""
-
-    cleaned_value = _clean_amount(value)
-    if not cleaned_value:
-        return None
-    try:
-        return Decimal(cleaned_value)
-    except InvalidOperation:
-        return None
-
-
-def _find_row_date(source_row: dict[str, str], file_mapping: dict) -> date | None:
-    """Find the first parseable row date from mappings in the current file."""
-
-    for mapping in file_mapping.get("mappings", []):
-        if mapping.get("transform") != "parse_date":
-            continue
-        for column in mapping.get("source_columns", []):
-            parsed_date = _parse_date(source_row.get(column, ""))
-            if parsed_date is not None:
-                return parsed_date
-    return None
-
-
-def _format_money(amount: Decimal) -> str:
-    """Return a two-decimal money string for converted values."""
-
-    return str(amount.quantize(Decimal("0.01")))
 
 
 def _add_warning(warnings: list[str], warning: str) -> None:
@@ -309,47 +304,10 @@ def _add_warning(warnings: list[str], warning: str) -> None:
 def _normalize_date(value: str) -> str:
     """Return a canonical ISO date when a common CSV date format is recognized."""
 
-    parsed_date = _parse_date(value)
+    parsed_date = parse_date(value)
     if parsed_date is None:
         return value.strip()
     return parsed_date.isoformat()
-
-
-def _parse_date(value: str) -> date | None:
-    """Parse common bank-export date formats without guessing from row order."""
-
-    cleaned_value = value.strip()
-    if not cleaned_value:
-        return None
-
-    try:
-        return datetime.fromisoformat(cleaned_value.replace("Z", "+00:00")).date()
-    except ValueError:
-        pass
-
-    normalized_value = cleaned_value.replace(".", "/").replace("-", "/")
-    formats = [
-        "%Y/%m/%d",
-        "%d/%m/%Y",
-        "%d/%m/%y",
-        "%m/%d/%Y",
-        "%m/%d/%y",
-        "%d %b %Y",
-        "%d %B %Y",
-        "%b %d %Y",
-        "%B %d %Y",
-        "%Y/%m/%d %H:%M:%S",
-        "%d/%m/%Y %H:%M:%S",
-        "%m/%d/%Y %H:%M:%S",
-    ]
-
-    for date_format in formats:
-        candidate = normalized_value if "/" in date_format else cleaned_value
-        try:
-            return datetime.strptime(candidate, date_format).date()
-        except ValueError:
-            continue
-    return None
 
 
 def _apply_result_operations(
@@ -380,7 +338,7 @@ def _sort_rows(
     text_rows = []
     for index, row in enumerate(rows):
         value = row.get(column, "")
-        parsed_date = _parse_date(value)
+        parsed_date = parse_date(value)
         if parsed_date is None:
             text_rows.append((index, row))
             continue

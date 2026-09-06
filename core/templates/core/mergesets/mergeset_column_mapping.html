@@ -238,6 +238,14 @@
                             {% endfor %}
                         </div>
                     {% endif %}
+                    {% if merge_preview.blocking_errors %}
+                        <div class="ws-card-body">
+                            <p class="ws-field-error">Resolve these exceptions before CSV export:</p>
+                            {% for error in merge_preview.blocking_errors %}
+                                <p class="ws-field-error">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
                     {% if merge_preview.rows %}
                         <div class="ws-table-wrap preview-table" id="spreadsheet-preview" data-preview-table hidden>
                             <table class="ws-table">
@@ -262,6 +270,31 @@
                     {% else %}
                         <p class="ws-empty">No preview rows could be generated from this plan.</p>
                     {% endif %}
+                </section>
+
+                <section class="ws-card" aria-labelledby="reconciliation-heading">
+                    <div class="ws-card-header">
+                        <p class="ws-eyebrow">Reconciliation</p>
+                        <h2 class="ws-card-title" id="reconciliation-heading">Review totals and exceptions</h2>
+                    </div>
+                    <div class="ws-card-body iteration-card-body">
+                        <p>Output rows: {{ merge_preview.reconciliation.output_row_count }}</p>
+                        {% for source in merge_preview.reconciliation.source_rows %}
+                            <p>{{ source.source_file }}: {{ source.row_count }} source row{{ source.row_count|pluralize }}</p>
+                        {% endfor %}
+                        {% for total in merge_preview.reconciliation.money_totals %}
+                            <p>{{ total.column }} total: {{ total.total }} ({{ total.currency }}) from {{ total.valid_row_count }} valid row{{ total.valid_row_count|pluralize }}</p>
+                        {% endfor %}
+                        {% if merge_preview.reconciliation.exceptions %}
+                            <p class="ws-field-error">Open exceptions must be resolved before CSV export.</p>
+                            {% for exception in merge_preview.reconciliation.exceptions %}
+                                <p class="ws-field-error">{{ exception.category }} — {{ exception.status }}: {{ exception.message }}</p>
+                            {% endfor %}
+                            <p>Use “Ask AI to revise” below, then review the regenerated result.</p>
+                        {% else %}
+                            <p>No open exceptions. Totals are ready for your review.</p>
+                        {% endif %}
+                    </div>
                 </section>
 
                 <section class="ws-card" aria-labelledby="revision-heading">
@@ -298,12 +331,17 @@
                             Back to AI chat
                         </a>
                     {% endif %}
-                    <a class="ws-btn-primary" href="{% url 'core:mergeset_export_csv' mergeset.pk %}">
-                        Download CSV
-                    </a>
                     {% if merge_plan.status == "approved" %}
+                        {% if merge_preview.blocking_errors %}
+                            <span class="ws-btn-disabled" aria-disabled="true">Resolve exceptions to download CSV</span>
+                        {% else %}
+                            <a class="ws-btn-primary" href="{% url 'core:mergeset_workflow_complete' mergeset.pk %}">
+                                Complete workflow
+                            </a>
+                        {% endif %}
                         <span class="ws-btn-disabled" aria-disabled="true">Mapping approved</span>
                     {% else %}
+                        <span class="ws-btn-disabled" aria-disabled="true">Approve mapping to download CSV</span>
                         <form method="post" action="{% url 'core:mergeset_approve_mapping' mergeset.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="ws-btn-primary">Approve mapping</button>

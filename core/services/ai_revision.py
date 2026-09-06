@@ -13,6 +13,7 @@ from core.services.ai_planning import (
     OpenAIPlanningError,
     _build_openai_client,
     _extract_response_payload,
+    _validate_mapping_plan,
     _validate_response_payload,
 )
 from core.services.merge_preview import build_merge_preview
@@ -91,6 +92,7 @@ def request_merge_plan_revision(
     _validate_response_payload(response_payload)
     if response_payload["status"] != "mapping_ready":
         raise OpenAIPlanningError("Plan revisions must return a ready mapping plan.")
+    _validate_mapping_plan(merge_plan.mergeset, response_payload)
     record_ai_usage(
         user=merge_plan.mergeset.owner,
         mergeset=merge_plan.mergeset,

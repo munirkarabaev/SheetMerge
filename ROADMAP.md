@@ -44,34 +44,33 @@ exception handling—not lower AI-token usage.
 
 - Django project, custom user accounts, and dashboard
 - Mergesets, file upload, CSV parsing, and spreadsheet previews
-- AI-assisted planning, deterministic mapping preview, and mapping approval
-- CSV export and monthly exchange-rate conversion foundation
+- AI-assisted planning and semantically validated, constrained mapping plans
+- Deterministic mapping preview and mandatory human mapping approval
+- Approval-only CSV export with spreadsheet-formula protection
+- Export-blocking validation exceptions for dates, amounts, and currency
+  conversion failures
+- Explicit US/European amount normalization rules
+- Transaction and currency-conversion provenance in exports
+- Reconciliation totals, open-exception review, and a completed-workflow screen
+- Deterministic monthly exchange-rate conversion with cached provider rates
 
-## Next: make the merge workflow safe and complete
+## Next: prepare safely for real customer financial data
 
-- Make export require an approved mapping plan.
-- Block export when date, amount, or currency conversion exceptions remain; never
-  substitute an unconverted amount into a converted-amount field.
-- Escape spreadsheet formulas in CSV exports.
-- Improve amount normalization beyond debit/credit signed amounts, including
-  explicit decimal and thousands-separator rules.
-- Add transaction-level provenance: source file, source-row number, original
-  values, mapping-plan version, transformations, and review state.
-- Add export provenance for currency conversions: original and reporting
-  amounts/currencies, rate, provider, rate date or period, policy, and rounding.
-- Add reconciliation totals and a reviewable exception workflow.
+- Define data retention and deletion behavior for uploaded source files,
+  previews, plans, and exports.
+- Restrict and audit sensitive-data logging; ensure error reports do not expose
+  financial rows, samples, or secrets.
+- Clearly disclose which representative source samples are sent to AI, why, and
+  when; obtain any necessary customer acknowledgement.
+- Bound upload sizes, row counts, and processing time; paginate previews and
+  make failure states deterministic.
+- Move the Django secret key and debug setting to environment-based development
+  and production configuration.
 
 ## Before using real customer financial data
 
-- Validate AI-proposed plans semantically before execution: known source columns,
-  allowed transforms, required fields, date/amount locale rules, currency policy,
-  and mandatory review for low-confidence decisions.
-- Define data retention and deletion behavior, restrict sensitive logging, and
-  disclose what source samples are sent to AI.
-- Bound uploads and processing, paginate previews, and use deterministic
-  error-handling rather than silent fallback values.
-- Move the Django secret key and debug setting to environment-based development
-  and production configuration.
+- Complete every item in “Next: prepare safely for real customer financial
+  data,” and test the resulting controls with representative non-customer data.
 
 ## Before charging customers or public launch
 
@@ -90,7 +89,6 @@ exception handling—not lower AI-token usage.
 
 ## Later enhancements
 
-- Add a clear completed-workflow screen after approval/export.
 - Add XLSX import/export if it remains a validated product requirement.
 - Transaction grouping and categorization.
 - Richer conversational corrections, constrained by deterministic execution.

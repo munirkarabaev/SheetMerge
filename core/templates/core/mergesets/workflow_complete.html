@@ -1,0 +1,42 @@
+{% extends "core/base.html" %}
+
+{% block title %}Workflow complete | {{ mergeset.name }} | SheetMerge{% endblock title %}
+
+{% block content %}
+    <section class="home-hero">
+        <div class="home-hero__content">
+            <p class="eyebrow">Workflow complete</p>
+            <h1>{{ mergeset.name }} is ready to export.</h1>
+            <p>Your approved mapping has no open exceptions and the output is ready for accountant review.</p>
+            <div class="hero-actions">
+                <a class="button button--primary" href="{% url 'core:mergeset_export_csv' mergeset.pk %}">Download CSV</a>
+                <a class="button button--secondary" href="{% url 'core:mergeset_column_mapping' mergeset.pk %}">Back to mapping review</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="workflow-section" aria-labelledby="completion-summary">
+        <div class="section-heading">
+            <p class="eyebrow">Final review</p>
+            <h2 id="completion-summary">Export summary</h2>
+        </div>
+        <div class="benefit-grid">
+            <article class="benefit-card">
+                <p class="benefit-card__label">Output rows</p>
+                <h3>{{ reconciliation.output_row_count }}</h3>
+            </article>
+            <article class="benefit-card">
+                <p class="benefit-card__label">Mapping plan</p>
+                <h3>plan-{{ merge_plan.pk }}</h3>
+            </article>
+            <article class="benefit-card">
+                <p class="benefit-card__label">Exceptions</p>
+                <h3>0 open</h3>
+            </article>
+        </div>
+        {% for total in reconciliation.money_totals %}
+            <p>{{ total.column }} total: {{ total.total }} ({{ total.currency }})</p>
+        {% endfor %}
+        <p>The CSV includes transaction and currency-conversion provenance where applicable.</p>
+    </section>
+{% endblock content %}

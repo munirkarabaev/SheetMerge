@@ -19,5 +19,13 @@ reproducible and prevents free-form model output from changing data directly.
 ## 2026-06-19 — Exchange-rate source and cache
 
 Use cached monthly average rates and the Frankfurter provider on cache miss.
-Missing or invalid rate data must preserve the original row and surface a
-warning rather than prevent the full preview/export.
+The original warning-only failure policy is superseded by the export-safety
+decision below.
+
+## 2026-09-06 — Document current export-safety policy
+
+Currency conversion failures preserve the source data and keep the row visible
+in preview, but leave the converted output cell blank and record a blocking
+exception. Export requires an explicitly approved plan with no blocking
+exceptions. Never substitute an unconverted amount into a converted output cell.
+This records the behavior already implemented in the current working tree.

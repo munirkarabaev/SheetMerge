@@ -206,8 +206,8 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "data-revision-error")
         self.assertContains(response, "-4.50")
         self.assertContains(response, "Back to AI chat")
-        self.assertContains(response, "Download CSV")
-        self.assertContains(response, self.export_url)
+        self.assertContains(response, "Approve mapping to download CSV")
+        self.assertNotContains(response, self.export_url)
 
     def test_column_mapping_renders_currency_conversion_warnings(self) -> None:
         """The review page should show conversion intent and preview warnings."""
@@ -241,8 +241,9 @@ class ColumnMappingViewTests(TestCase):
         self.assertContains(response, "monthly_average")
         self.assertContains(response, "Detected currency")
         self.assertContains(response, "USD")
-        self.assertContains(response, "kept original amount")
+        self.assertContains(response, "currency conversion failed")
         self.assertContains(response, "recognized row date")
+        self.assertContains(response, "Resolve these exceptions before CSV export:")
 
     def test_column_mapping_post_requests_ai_revision(self) -> None:
         """Submitting a revision should call the AI revision service."""
@@ -364,10 +365,12 @@ class ColumnMappingViewTests(TestCase):
             reverse("core:mergeset_ai_suggestions", kwargs={"pk": self.mergeset.pk}),
         )
 
-    def test_csv_export_downloads_latest_merge_preview(self) -> None:
-        """CSV export should match the deterministic mapped preview rows."""
+    def test_csv_export_downloads_approved_merge_preview(self) -> None:
+        """CSV export should match the approved deterministic preview rows."""
 
-        self.create_merge_plan()
+        merge_plan = self.create_merge_plan()
+        merge_plan.status = MergePlan.Status.APPROVED
+        merge_plan.save(update_fields=["status"])
         self.client.force_login(self.owner)
 
         response = self.client.get(self.export_url)
@@ -378,10 +381,9 @@ class ColumnMappingViewTests(TestCase):
             response["Content-Disposition"],
             'attachment; filename="monthly-statements.csv"',
         )
-        self.assertEqual(
-            response.content.decode(),
-            "Date,Amount\r\n2026-01-01,-4.50\r\n",
-        )
+        self.assertTrue(response.content.decode().startswith(
+            "Date,Amount,Provenance source file,Provenance source row,"
+        ))
 
     def test_ai_suggestions_links_to_existing_mapping_plan(self) -> None:
         """AI suggestions should link to review when a plan exists."""

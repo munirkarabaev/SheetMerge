@@ -330,6 +330,7 @@ class MergePlanningContextTests(TestCase):
     def test_planning_turn_creates_merge_plan_when_mapping_ready(self) -> None:
         """Mapping-ready responses should create a reviewable merge plan."""
 
+        MergesetFile.objects.create(mergeset=self.mergeset, file="mergesets/test/sources/bank.csv", original_name="bank.csv", file_size=50, parse_status=MergesetFile.ParseStatus.PARSED, headers=["Transaction Date", "Balance"], delimiter=",", row_count=1)
         client = FakeOpenAIClient(
             (
                 '{"status":"mapping_ready","assistant_message":"I drafted the '
