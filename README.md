@@ -88,7 +88,7 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Open `http://127.0.0.1:8000/`. Repository access is required while the project remains private. AI requests require configured API access and may incur usage charges.
+Open `http://127.0.0.1:8000/`. AI requests require configured API access and may incur usage charges.
 
 New users start with zero AI token credits. Sign in to `/admin/` with the superuser account, select the development user's record, and set a positive `ai_token_credit_balance` before using AI planning or revision. This application balance is separate from the API account's billing.
 
